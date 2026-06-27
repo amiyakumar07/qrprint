@@ -114,13 +114,13 @@ app.get('/api/pricing', (req, res) => {
 app.post('/api/register', async (req, res) => {
   try {
     const {
-      name, printer, address, phone, bw_price, color_price,
+      name, email, printer, address, phone, bw_price, color_price,
       payment_mode, gateway, razorpay_key_id, razorpay_key_secret,
       phonepe_merchant_id, phonepe_salt_key, phonepe_salt_index, password
     } = req.body;
 
-    if (!name || !password) {
-      return res.status(400).json({ error: 'Shop name and password are required' });
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Shop name, Email, and Password are required' });
     }
 
     const shop_id = 'SHOP_' + nanoid(8);
@@ -128,14 +128,14 @@ app.post('/api/register', async (req, res) => {
 
     const stmt = db.prepare(`
       INSERT INTO shops (
-        id, name, printer, address, phone, bw_price, color_price,
+        id, name, email, printer, address, phone, bw_price, color_price,
         payment_mode, gateway, razorpay_key_id, razorpay_key_secret,
         phonepe_merchant_id, phonepe_salt_key, phonepe_salt_index, password_hash, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
     `);
 
     stmt.run(
-      shop_id, name, printer || 'Auto Detect', address || '', phone || '',
+      shop_id, name, email, printer || 'Auto Detect', address || '', phone || '',
       parseFloat(bw_price) || 1, parseFloat(color_price) || 5,
       payment_mode || 'both', gateway || 'razorpay',
       razorpay_key_id || '', razorpay_key_secret || '',
@@ -198,8 +198,10 @@ app.post('/api/verify-setup-payment', (req, res) => {
     const setupFeePaid = offerRow ? parseFloat(offerRow.value) : 1;
 
     db.prepare(`UPDATE shops SET status = 'active', setup_fee_paid = ? WHERE id = ?`).run(setupFeePaid, shop_id);
+    const updatedShop = db.prepare(`SELECT * FROM shops WHERE id = ?`).get(shop_id);
+    if (updatedShop) delete updatedShop.password_hash;
 
-    res.json({ success: true, shop_id });
+    res.json({ success: true, shop_id, shop: updatedShop });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -210,10 +212,11 @@ app.post('/api/verify-setup-payment', (req, res) => {
 // ==========================================
 app.post('/api/admin/login', async (req, res) => {
   try {
-    const { shop_id, password } = req.body;
-    const shop = db.prepare(`SELECT * FROM shops WHERE id = ?`).get(shop_id);
+    const { shop_id, email, password } = req.body;
+    const identifier = email || shop_id;
+    const shop = db.prepare(`SELECT * FROM shops WHERE id = ?`).get(identifier);
     if (!shop) {
-      return res.status(401).json({ error: 'Shop not found' });
+      return res.status(401).json({ error: 'Shop not found for given Email / Shop ID' });
     }
 
     if (!shop.password_hash) {

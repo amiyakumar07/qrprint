@@ -49,11 +49,11 @@ class SimpleDB {
         let changes = 0;
         if (cleanSql.startsWith('INSERT INTO shops')) {
           const shop = {
-            id: args[0], name: args[1], printer: args[2], address: args[3], phone: args[4],
-            bw_price: args[5], color_price: args[6], payment_mode: args[7], gateway: args[8],
-            razorpay_key_id: args[9], razorpay_key_secret: args[10], phonepe_merchant_id: args[11],
-            phonepe_salt_key: args[12], phonepe_salt_index: args[13], password_hash: args[14],
-            status: args[15] || 'pending', setup_fee_paid: 0, created_at: new Date().toISOString()
+            id: args[0], name: args[1], email: args[2] || '', printer: args[3], address: args[4], phone: args[5],
+            bw_price: args[6], color_price: args[7], payment_mode: args[8], gateway: args[9],
+            razorpay_key_id: args[10], razorpay_key_secret: args[11], phonepe_merchant_id: args[12],
+            phonepe_salt_key: args[13], phonepe_salt_index: args[14], password_hash: args[15],
+            status: args[16] || 'pending', setup_fee_paid: 0, created_at: new Date().toISOString()
           };
           self.data.shops.push(shop);
           changes = 1;
@@ -141,18 +141,18 @@ class SimpleDB {
       get(...args) {
         if (cleanSql.includes('FROM settings WHERE key =')) {
           return self.data.settings.find(s => s.key === args[0]);
-        } else if (cleanSql.includes('FROM shops WHERE id =')) {
-          return self.data.shops.find(s => s.id === args[0]);
+        } else if (cleanSql.includes('FROM shops WHERE id =') || cleanSql.includes('FROM shops WHERE email =')) {
+          return self.data.shops.find(s => s.id === args[0] || (s.email && s.email.toLowerCase() === String(args[0]).toLowerCase()));
         } else if (cleanSql.includes('FROM print_jobs WHERE id =')) {
           return self.data.print_jobs.find(j => j.id === args[0]);
         } else if (cleanSql.includes('SELECT password_hash FROM shops')) {
-          const s = self.data.shops.find(x => x.id === args[0]);
+          const s = self.data.shops.find(x => x.id === args[0] || (x.email && x.email.toLowerCase() === String(args[0]).toLowerCase()));
           return s ? { password_hash: s.password_hash } : undefined;
         } else if (cleanSql.includes('SELECT razorpay_key_secret FROM shops')) {
-          const s = self.data.shops.find(x => x.id === args[0]);
+          const s = self.data.shops.find(x => x.id === args[0] || (x.email && x.email.toLowerCase() === String(args[0]).toLowerCase()));
           return s ? { razorpay_key_secret: s.razorpay_key_secret } : undefined;
         } else if (cleanSql.includes('SELECT bw_price, color_price FROM shops')) {
-          const s = self.data.shops.find(x => x.id === args[0]);
+          const s = self.data.shops.find(x => x.id === args[0] || (x.email && x.email.toLowerCase() === String(args[0]).toLowerCase()));
           return s ? { bw_price: s.bw_price, color_price: s.color_price } : undefined;
         } else if (cleanSql.includes('SELECT print_status, payment_status FROM print_jobs')) {
           const j = self.data.print_jobs.find(x => x.id === args[0]);
