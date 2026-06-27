@@ -41,7 +41,7 @@
       <p>Place a unique QR Code outside your print shop. Customers scan with their phone, upload documents securely, and print automatically on your printer. No USB drives, wires, or Bluetooth required!</p>
       
       <div class="price-badge">
-        7 Days Promo Offer: <span class="strike" id="actual-price">₹999</span> <span id="offer-price" style="font-size: 1.6rem; color: var(--primary);">₹1</span> (99% OFF Special)
+        7 Days Promo Offer: <span id="offer-price" style="font-size: 1.6rem; color: var(--primary); font-weight: 800;">₹1</span> (Special Launch Rate)
       </div>
 
       <div>
@@ -247,7 +247,7 @@
     <div class="offer-bolt">⚡</div>
     <div class="offer-text">
       <div><strong>7 DAYS LAUNCH OFFER</strong> <span class="offer-badge-discount">99% OFF</span></div>
-      <div class="offer-subtext">Special Access for <strong style="color: #FFD166;">₹1</strong> <span style="text-decoration: line-through; opacity: 0.6;">₹999</span></div>
+      <div class="offer-subtext">Special Access for <strong style="color: #FFD166;">₹1 Only</strong></div>
     </div>
     <div class="offer-timer" id="countdown-timer">6d 23h 59m</div>
     <a href="/dashboard" class="btn-claim">Claim ₹1 ↗</a>
@@ -273,8 +273,8 @@
     fetch('/api/pricing')
       .then(res => res.json())
       .then(data => {
-        document.getElementById('actual-price').innerText = '₹' + data.actual_price;
-        document.getElementById('offer-price').innerText = '₹' + data.offer_price;
+        const el = document.getElementById('offer-price');
+        if (el) el.innerText = '₹' + data.offer_price;
       })
       .catch(err => console.error(err));
 

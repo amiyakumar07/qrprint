@@ -163,8 +163,7 @@
       <!-- Section 7: Setup Fee Display -->
       <div style="background: var(--bg-color); padding: 1rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;">
         <div style="font-size: 0.9rem; color: var(--text-muted);">One-time Setup Fee</div>
-        <div style="font-size: 1.5rem; font-weight: 800; color: var(--primary);">
-          <span style="text-decoration: line-through; color: var(--text-muted); font-size: 1.1rem; margin-right: 8px;" id="setup-actual">₹999</span>
+        <div style="font-size: 1.8rem; font-weight: 800; color: var(--primary);">
           <span id="setup-offer">₹1</span>
         </div>
       </div>
@@ -250,8 +249,8 @@
     fetch('/api/pricing')
       .then(res => res.json())
       .then(data => {
-        document.getElementById('setup-actual').innerText = '₹' + data.actual_price;
-        document.getElementById('setup-offer').innerText = '₹' + data.offer_price;
+        const el = document.getElementById('setup-offer');
+        if (el) el.innerText = '₹' + data.offer_price;
       });
 
     const companyContent = {

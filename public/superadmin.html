@@ -79,7 +79,7 @@
           <div style="flex: 1; min-width: 200px; background: var(--bg-color); padding: 0.8rem 1rem; border-radius: 8px; text-align: center;">
             <small style="color: var(--text-muted);">Live Preview on Landing Page:</small>
             <div style="font-size: 1.3rem; font-weight: 800; color: var(--primary);" id="pr-preview">
-              <span style="text-decoration: line-through; color: var(--text-muted); font-size: 1rem;">₹999</span> ₹1 <span class="badge badge-success">99% OFF</span>
+              ₹1 <span class="badge badge-success">Active Offer</span>
             </div>
           </div>
           <div>
@@ -179,9 +179,7 @@
       const offer = parseFloat(document.getElementById('pr-offer').value) || 0;
       const discount = actual > 0 ? Math.round(((actual - offer) / actual) * 100) : 0;
       document.getElementById('pr-preview').innerHTML = `
-        <span style="text-decoration: line-through; color: var(--text-muted); font-size: 1rem;">₹${actual}</span> 
-        ₹${offer} 
-        <span class="badge badge-success">${discount}% OFF</span>
+        ₹${offer} <span class="badge badge-success">Active Offer</span>
       `;
     }
 

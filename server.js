@@ -100,8 +100,8 @@ app.get('/api/pricing', (req, res) => {
     const actual = db.prepare(`SELECT value FROM settings WHERE key = 'actual_price'`).get();
     const offer = db.prepare(`SELECT value FROM settings WHERE key = 'offer_price'`).get();
     res.json({
-      actual_price: actual ? parseFloat(actual.value) : 999,
-      offer_price: offer ? parseFloat(offer.value) : 499
+      actual_price: actual ? parseFloat(actual.value) : 1,
+      offer_price: offer ? parseFloat(offer.value) : 1
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -145,7 +145,7 @@ app.post('/api/register', async (req, res) => {
 
     // Fetch dynamic setup fee
     const offerRow = db.prepare(`SELECT value FROM settings WHERE key = 'offer_price'`).get();
-    const setupFeeAmount = offerRow ? parseFloat(offerRow.value) : 499;
+    const setupFeeAmount = offerRow ? parseFloat(offerRow.value) : 1;
 
     let razorpay_order_id = 'order_mock_' + nanoid(10);
     const platformKey = process.env.PLATFORM_RAZORPAY_KEY_ID || 'rzp_test_mockkeyid';
@@ -195,7 +195,7 @@ app.post('/api/verify-setup-payment', (req, res) => {
     }
 
     const offerRow = db.prepare(`SELECT value FROM settings WHERE key = 'offer_price'`).get();
-    const setupFeePaid = offerRow ? parseFloat(offerRow.value) : 499;
+    const setupFeePaid = offerRow ? parseFloat(offerRow.value) : 1;
 
     db.prepare(`UPDATE shops SET status = 'active', setup_fee_paid = ? WHERE id = ?`).run(setupFeePaid, shop_id);
 
@@ -649,8 +649,8 @@ app.get('/api/superadmin/stats', (req, res) => {
       active_shops,
       pending_shops,
       total_setup_fees,
-      actual_price: actual ? parseFloat(actual.value) : 999,
-      offer_price: offer ? parseFloat(offer.value) : 499
+      actual_price: actual ? parseFloat(actual.value) : 1,
+      offer_price: offer ? parseFloat(offer.value) : 1
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
