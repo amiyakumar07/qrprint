@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QRPrint - Ultimate Cloud Print & PDF Toolkit</title>
+  <link rel="stylesheet" href="/style.css">
+  <!-- Firebase Compatibility SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="/firebase-config.js"></script>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <!-- LEFT SIDE: LOGO ONLY -->
+      <div class="nav-left">
+        <a href="/" class="logo">🖨️ QRPrint</a>
+      </div>
+
+      <!-- MIDDLE SIDE: PRICING & ABOUT US -->
+      <div class="nav-center">
+        <a href="/dashboard">Pricing</a>
+        <a href="#" onclick="openCompanyModal('about')">About Us</a>
+      </div>
+
+      <!-- RIGHT SIDE: THEME TOGGLE + LOGIN + SIGN UP -->
+      <div class="nav-right" id="nav-auth-container">
+        <button class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle Dark/Light Theme">🌙</button>
+        <a href="#" onclick="openAuthModal('login')" class="btn btn-outline">Login</a>
+        <a href="#" onclick="openAuthModal('signup')" class="btn btn-primary">Sign Up</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>Scan QR, Print Instantly! 🚀</h1>
+      <p>Place a unique QR Code outside your print shop. Customers scan with their phone, upload documents securely, and print automatically on your printer. No USB drives, wires, or Bluetooth required!</p>
+      
+      <div class="price-badge">
+        7 Days Promo Offer: <span class="strike" id="actual-price">₹999</span> <span id="offer-price" style="font-size: 1.6rem; color: var(--primary);">₹1</span> (99% OFF Special)
+      </div>
+
+      <div>
+        <a href="/dashboard" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.85rem 2.2rem;">Setup Shop Now @ ₹1</a>
+        <a href="/admin" class="btn btn-secondary" style="font-size: 1.1rem; padding: 0.85rem 2.2rem;">Shop Owner Dashboard</a>
+      </div>
+    </section>
+
+    <!-- ULTIMATE PDF TOOLKIT HIGHLIGHTS -->
+    <h2 class="section-title">📄 Ultimate PDF Toolkit Included</h2>
+    <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem; margin-top: -1.5rem;">Modern document tools to manage files seamlessly before printing</p>
+    
+    <div class="grid">
+      <div class="card tool-card" onclick="window.open('https://www.swagchup.in/', '_blank')" style="cursor: pointer;">
+        <div class="tool-icon">🧩</div>
+        <h3 class="card-title">PDF Merge & Combine ↗</h3>
+        <p>Combine multiple documents or chapters into a unified PDF file for seamless printing.</p>
+      </div>
+      <div class="card tool-card" onclick="window.open('https://www.swagchup.in/', '_blank')" style="cursor: pointer;">
+        <div class="tool-icon">✂️</div>
+        <h3 class="card-title">Smart Page Split ↗</h3>
+        <p>Extract and print specific page ranges from large documents effortlessly.</p>
+      </div>
+      <div class="card tool-card" onclick="window.open('https://www.swagchup.in/', '_blank')" style="cursor: pointer;">
+        <div class="tool-icon">🗜️</div>
+        <h3 class="card-title">Instant PDF Compression ↗</h3>
+        <p>Compress file sizes while preserving original document clarity for fast uploading.</p>
+      </div>
+      <div class="card tool-card" onclick="window.open('https://www.swagchup.in/', '_blank')" style="cursor: pointer;">
+        <div class="tool-icon">🖼️</div>
+        <h3 class="card-title">Image to PDF Converter ↗</h3>
+        <p>Convert JPG or PNG photos instantly into high-quality printable PDF files.</p>
+      </div>
+      <div class="card tool-card">
+        <div class="tool-icon">🔒</div>
+        <h3 class="card-title">100% Privacy & Auto-Delete</h3>
+        <p>All private customer files are automatically purged from servers within 24 hours.</p>
+      </div>
+      <div class="card tool-card">
+        <div class="tool-icon">🎨</div>
+        <h3 class="card-title">Color vs B&W Auto-Detect</h3>
+        <p>Automated detection and calculation of Black & White vs Color page printing rates.</p>
+      </div>
+    </div>
+
+    <h2 class="section-title">How It Works 🛠️</h2>
+    <div class="grid">
+      <div class="card" style="text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 10px;">1️⃣</div>
+        <h3 class="card-title">Scan QR Code</h3>
+        <p>Customers scan your shop's unique QR code using any Smartphone camera.</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 10px;">2️⃣</div>
+        <h3 class="card-title">Upload File</h3>
+        <p>Upload PDFs, Images, or Documents and configure page print options.</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 10px;">3️⃣</div>
+        <h3 class="card-title">Make Payment</h3>
+        <p>Pay instantly online via UPI / QR or choose Cash payment at the counter.</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 10px;">4️⃣</div>
+        <h3 class="card-title">Automatic Print</h3>
+        <p>The document prints automatically on your shop's printer without any wires!</p>
+      </div>
+    </div>
+
+    <h2 class="section-title">Why Choose QRPrint? ⭐</h2>
+    <div class="grid">
+      <div class="card">
+        <h3 class="card-title">📶 100% Wireless</h3>
+        <p>Zero wires, USB drives, or Bluetooth pairing needed. Fully cloud automated.</p>
+      </div>
+      <div class="card">
+        <h3 class="card-title">💸 Instant Earnings</h3>
+        <p>Receive direct customer payments instantly to your linked UPI bank account.</p>
+      </div>
+      <div class="card">
+        <h3 class="card-title">📊 Smart Dashboard</h3>
+        <p>Track real-time prints, today's total earnings, and recent orders dynamically.</p>
+      </div>
+      <div class="card">
+        <h3 class="card-title">🖨️ Any Printer Support</h3>
+        <p>Compatible with any Windows-connected USB, Wireless, or Thermal printer.</p>
+      </div>
+      <div class="card">
+        <h3 class="card-title">⚡ High Speed</h3>
+        <p>Documents reach your printer queue within seconds over cloud connections.</p>
+      </div>
+      <div class="card">
+        <h3 class="card-title">🛡️ Safe & Secure</h3>
+        <p>Bank-grade encryption with automated 24-hour file cleanup protocols.</p>
+      </div>
+    </div>
+
+    <section class="card" style="text-align: center; background: linear-gradient(135deg, #004E64 0%, #2575FC 100%); color: white; margin-top: 3rem; padding: 3.5rem 1.5rem;">
+      <h2 style="font-size: 2.2rem; margin-bottom: 1rem;">Digitize Your Print Shop Today!</h2>
+      <p style="margin-bottom: 1.8rem; opacity: 0.95;">Limited 7-Day Promotion: 99% OFF! Register now at just ₹1 for lifetime access.</p>
+      <a href="/dashboard" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.85rem 2.2rem;">Setup Shop Now (@ ₹1)</a>
+    </section>
+  </main>
+
+  <!-- Firebase Auth Modal -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="modal-card">
+      <button class="modal-close" onclick="closeAuthModal()">&times;</button>
+      <h2 id="modal-title" style="text-align: center; color: var(--text-main); margin-bottom: 1.5rem;">Firebase Login</h2>
+      <div id="auth-error" style="color: var(--danger); display: none; margin-bottom: 1rem; text-align: center; font-size: 0.9rem;"></div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="auth-email" class="form-control" placeholder="name@example.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="auth-password" class="form-control" placeholder="Password">
+      </div>
+      <button class="btn btn-primary" id="modal-submit-btn" style="width: 100%; margin-top: 0.5rem;" onclick="handleAuthSubmit()">Login</button>
+      <div style="text-align: center; margin: 1rem 0; color: var(--text-muted); font-size: 0.85rem;">OR</div>
+      <button class="btn btn-google" onclick="handleGoogleAuth()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" alt="Google"> Continue with Google
+      </button>
+      <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
+        <span id="modal-switch-text">Don't have an account?</span>
+        <a href="#" id="modal-switch-link" style="color: var(--primary); font-weight: 700; text-decoration: none;" onclick="switchAuthMode()">Sign Up</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Company Policy Info Modal -->
+  <div class="modal-overlay" id="company-modal">
+    <div class="modal-card modal-card-large">
+      <button class="modal-close" onclick="closeCompanyModal()">&times;</button>
+      <h2 id="company-modal-title" style="color: var(--text-main); margin-bottom: 1rem;">...</h2>
+      <div id="company-modal-body" style="line-height: 1.7; color: var(--text-main);">...</div>
+    </div>
+  </div>
+
+  <!-- MULTI-COLUMN SWAGCHUP STYLE SITE FOOTER -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <a href="/" class="footer-logo">🖨️ QRPrint</a>
+        <div class="footer-tagline">Wireless Cloud Printing & PDF Toolkit</div>
+        <p>India's premier wireless cloud printing system. Smart document printing, simplified for every print shop & customer.</p>
+        
+        <div class="social-links">
+          <a href="#" class="social-icon" title="Twitter"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg></a>
+          <a href="#" class="social-icon" title="Facebook"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></a>
+          <a href="#" class="social-icon" title="Instagram"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>
+          <a href="#" class="social-icon" title="YouTube"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg></a>
+          <a href="#" class="social-icon" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a>
+          <a href="#" class="social-icon" title="LinkedIn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg></a>
+        </div>
+
+        <div class="razorpay-badge">
+          🛡️ SECURED BY RAZORPAY
+        </div>
+      </div>
+
+      <div class="footer-column">
+        <h4>Partner</h4>
+        <ul>
+          <li><a href="https://www.swagchup.in/" target="_blank">Merge PDFs ↗</a></li>
+          <li><a href="https://www.swagchup.in/" target="_blank">Split PDFs ↗</a></li>
+          <li><a href="https://www.swagchup.in/" target="_blank">Convert PDF ↗</a></li>
+          <li><a href="https://www.swagchup.in/" target="_blank">Secure PDF ↗</a></li>
+          <li><a href="#">Wireless Cloud Print</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#" onclick="openCompanyModal('about')">About Us</a></li>
+          <li><a href="/dashboard">Pricing</a></li>
+          <li><a href="#" onclick="openCompanyModal('privacy')">Privacy Policy</a></li>
+          <li><a href="#" onclick="openCompanyModal('terms')">Terms of Service</a></li>
+          <li><a href="#" onclick="openCompanyModal('refund')">Refund Policy</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <h4>Get in Touch</h4>
+        <ul>
+          <li><a href="mailto:support@qrprint.in">✉️ Support Ticket</a></li>
+          <li><a href="https://wa.me/919876543210" target="_blank">📞 WhatsApp Support</a></li>
+          <li style="margin-top: 1rem;"><a href="#" onclick="openAuthModal('login')">🔐 Firebase Console Login</a></li>
+          <li><a href="#" onclick="openAuthModal('signup')">✨ Create Free Account</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>&copy; 2026 QRPrint. Built with pride from India 🇮🇳</div>
+      <div>Crafted with ❤️ by the QRPrint Team</div>
+    </div>
+  </footer>
+
+  <!-- FLOATING LAUNCH OFFER BAR -->
+  <div class="floating-offer-bar">
+    <div class="offer-bolt">⚡</div>
+    <div class="offer-text">
+      <div><strong>7 DAYS LAUNCH OFFER</strong> <span class="offer-badge-discount">99% OFF</span></div>
+      <div class="offer-subtext">Special Access for <strong style="color: #FFD166;">₹1</strong> <span style="text-decoration: line-through; opacity: 0.6;">₹999</span></div>
+    </div>
+    <div class="offer-timer" id="countdown-timer">6d 23h 59m</div>
+    <a href="/dashboard" class="btn-claim">Claim ₹1 ↗</a>
+  </div>
+
+  <script>
+    let currentMode = 'login';
+
+    function initTheme() {
+      const savedTheme = localStorage.getItem('qr_theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      document.getElementById('theme-btn').innerText = savedTheme === 'dark' ? '☀️' : '🌙';
+    }
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('qr_theme', next);
+      document.getElementById('theme-btn').innerText = next === 'dark' ? '☀️' : '🌙';
+    }
+    initTheme();
+
+    fetch('/api/pricing')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('actual-price').innerText = '₹' + data.actual_price;
+        document.getElementById('offer-price').innerText = '₹' + data.offer_price;
+      })
+      .catch(err => console.error(err));
+
+    let secondsLeft = 7 * 24 * 60 * 60 - 42;
+    setInterval(() => {
+      if (secondsLeft > 0) secondsLeft--;
+      const d = Math.floor(secondsLeft / (24 * 3600));
+      const h = Math.floor((secondsLeft % (24 * 3600)) / 3600);
+      const m = Math.floor((secondsLeft % 3600) / 60);
+      const s = secondsLeft % 60;
+      document.getElementById('countdown-timer').innerText = `${d}d ${h}h ${m}m ${s}s`;
+    }, 1000);
+
+    const companyContent = {
+      about: {
+        title: "About Us 🏢",
+        html: `<p><strong>QRPrint</strong> is India's leading wireless cloud printing infrastructure designed specifically for print shop owners (xerox shops, cyber cafes, and stationery stores) and their customers.</p>
+               <br><p>Our mission is to eliminate USB drives, Bluetooth pairing delays, and wire connections by offering a 100% cloud-automated printing ecosystem. Shop owners display a unique QR code outside their premises; customers scan, upload documents securely, pay online or at the counter, and documents automatically print directly on the shop's printer in seconds.</p>`
+      },
+      privacy: {
+        title: "Privacy Policy 🛡️",
+        html: `<p>At <strong>QRPrint</strong>, we prioritize the utmost security and confidentiality of your documents.</p>
+               <br><h4>1. Document Confidentiality</h4>
+               <p>Uploaded documents (PDFs, images, Word docs) are strictly used for instant printing tasks. All uploaded files are automatically and permanently purged from our storage servers within 24 hours.</p>
+               <br><h4>2. Data Protection</h4>
+               <p>We do not share, sell, or analyze your personal document contents. Payments are processed through bank-grade secured payment gateways (Razorpay / PhonePe).</p>`
+      },
+      terms: {
+        title: "Terms of Service 📜",
+        html: `<p>By accessing or registering with <strong>QRPrint</strong>, you agree to the following terms:</p>
+               <br><h4>1. Usage Terms</h4>
+               <p>Print shop owners must maintain active print agent software on their connected Windows PCs to process incoming print queues.</p>
+               <br><h4>2. Prohibited Content</h4>
+               <p>Users must not upload illegal, fraudulent, or unauthorized copyrighted material for printing.</p>`
+      },
+      refund: {
+        title: "Refund Policy 💸",
+        html: `<p>We strive to ensure complete customer and shop owner satisfaction.</p>
+               <br><h4>1. Setup Fee Refunds</h4>
+               <p>Shop owners are eligible for a full refund of their initial setup fee within 7 days of registration if technical integration assistance is unsuccessful.</p>
+               <br><h4>2. Print Job Adjustments</h4>
+               <p>If a print job fails due to printer hardware offline status or paper jam, payment is held in queue until resolved or marked for cash counter reconciliation.</p>`
+      }
+    };
+
+    function openCompanyModal(type) {
+      const data = companyContent[type];
+      if (data) {
+        document.getElementById('company-modal-title').innerHTML = data.title;
+        document.getElementById('company-modal-body').innerHTML = data.html;
+        document.getElementById('company-modal').classList.add('active');
+      }
+    }
+    function closeCompanyModal() {
+      document.getElementById('company-modal').classList.remove('active');
+    }
+
+    function openAuthModal(mode) {
+      currentMode = mode;
+      updateModalUI();
+      document.getElementById('auth-modal').classList.add('active');
+    }
+    function closeAuthModal() {
+      document.getElementById('auth-modal').classList.remove('active');
+      document.getElementById('auth-error').style.display = 'none';
+    }
+    function switchAuthMode() {
+      currentMode = currentMode === 'login' ? 'signup' : 'login';
+      updateModalUI();
+    }
+    function updateModalUI() {
+      const title = document.getElementById('modal-title');
+      const submitBtn = document.getElementById('modal-submit-btn');
+      const switchText = document.getElementById('modal-switch-text');
+      const switchLink = document.getElementById('modal-switch-link');
+      if (currentMode === 'login') {
+        title.innerText = 'Firebase Console Login 🔥';
+        submitBtn.innerText = 'Login';
+        switchText.innerText = "Don't have an account?";
+        switchLink.innerText = 'Sign Up';
+      } else {
+        title.innerText = 'Firebase Sign Up 🔥';
+        submitBtn.innerText = 'Create Account';
+        switchText.innerText = 'Already have an account?';
+        switchLink.innerText = 'Login';
+      }
+    }
+    async function handleAuthSubmit() {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value.trim();
+      const errEl = document.getElementById('auth-error');
+      errEl.style.display = 'none';
+      if (!email || !password) {
+        errEl.innerText = 'Please enter both email and password';
+        errEl.style.display = 'block';
+        return;
+      }
+      let res = currentMode === 'login' 
+        ? await window.FirebaseAuthHelper.loginWithEmail(email, password)
+        : await window.FirebaseAuthHelper.signUpWithEmail(email, password);
+      if (res.success) {
+        alert('🎉 Firebase Auth Success! Welcome ' + res.user.email);
+        closeAuthModal();
+      } else {
+        errEl.innerText = res.error;
+        errEl.style.display = 'block';
+      }
+    }
+    async function handleGoogleAuth() {
+      const res = await window.FirebaseAuthHelper.signInWithGoogle();
+      if (res.success) {
+        alert('🎉 Google Login Success! Welcome ' + res.user.displayName);
+        closeAuthModal();
+      } else {
+        const errEl = document.getElementById('auth-error');
+        errEl.innerText = res.error;
+        errEl.style.display = 'block';
+      }
+    }
+    window.FirebaseAuthHelper.onAuthStateChanged(user => {
+      const container = document.getElementById('nav-auth-container');
+      const themeBtnHTML = `<button class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle Dark/Light Theme">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙'}</button>`;
+      if (user) {
+        container.innerHTML = `
+          ${themeBtnHTML}
+          <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">👋 ${user.displayName || user.email.split('@')[0]}</span>
+          <button onclick="window.FirebaseAuthHelper.logout()" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Logout</button>
+        `;
+      } else {
+        container.innerHTML = `
+          ${themeBtnHTML}
+          <a href="#" onclick="openAuthModal('login')" class="btn btn-outline">Login</a>
+          <a href="#" onclick="openAuthModal('signup')" class="btn btn-primary">Sign Up</a>
+        `;
+      }
+    });
+  </script>
+</body>
+</html>

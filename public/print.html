@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Print Portal - QRPrint</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="/" class="logo">🖨️ QRPrint</a>
+      <span class="badge badge-success" id="shop-name-badge">Shop Loading...</span>
+    </div>
+  </header>
+
+  <main class="container" style="max-width: 600px;">
+    <!-- SHOP HEADER CARD -->
+    <div class="card" style="text-align: center; margin-bottom: 1.5rem;">
+      <h2 id="shop-name" style="color: var(--text-main); margin-bottom: 0.5rem;">...</h2>
+      <div style="display: flex; justify-content: center; gap: 1rem; color: var(--text-muted); font-size: 0.95rem;">
+        <span>📄 B&W Rate: <strong style="color: var(--text-main);" id="rate-bw">₹1</strong>/page</span>
+        <span>🎨 Color Rate: <strong style="color: var(--text-main);" id="rate-color">₹5</strong>/page</span>
+      </div>
+    </div>
+
+    <!-- ERROR VIEW -->
+    <div id="error-view" class="card" style="display: none; text-align: center; color: var(--danger);">
+      <h3 id="error-text">Shop setup is not active.</h3>
+    </div>
+
+    <!-- STEP 1: FILE UPLOAD -->
+    <div id="step-upload" class="card">
+      <h3 class="card-title" style="text-align: center;">Upload Your Document 📂</h3>
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Accepted formats: PDF, Images (JPG, PNG), Word documents (Max 20MB)</p>
+
+      <div id="drop-area" style="border: 2px dashed var(--primary); border-radius: 12px; padding: 2.5rem 1rem; text-align: center; cursor: pointer; background: var(--bg-color); transition: all 0.2s;" onclick="document.getElementById('file-input').click()">
+        <div style="font-size: 3rem; margin-bottom: 10px;">📄</div>
+        <div style="font-weight: 700; color: var(--text-main);">Click or Drag & Drop File Here</div>
+        <small style="color: var(--text-muted);">Tap to browse device storage</small>
+        <input type="file" id="file-input" style="display: none;" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onchange="handleFileSelect(this.files[0])">
+      </div>
+
+      <div id="upload-progress" style="display: none; margin-top: 1.5rem; text-align: center;">
+        <div class="loader"></div>
+        <p style="color: var(--text-muted);">Uploading & Analyzing Pages...</p>
+      </div>
+    </div>
+
+    <!-- STEP 2: CONFIGURE PAGES & PAYMENT -->
+    <div id="step-configure" class="card" style="display: none;">
+      <h3 class="card-title">Configure Print Options ⚙️</h3>
+      <div style="background: var(--bg-color); padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 700; color: var(--text-main);" id="uploaded-filename">document.pdf</span>
+        <span class="badge badge-success" id="detected-pages-badge">1 Page Detected</span>
+      </div>
+
+      <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+        <div class="form-group" style="flex: 1;">
+          <label>B&W Pages Count</label>
+          <input type="number" id="input-bw-pages" class="form-control" value="1" min="0" oninput="calculateTotalAmount()">
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label>Color Pages Count</label>
+          <input type="number" id="input-color-pages" class="form-control" value="0" min="0" oninput="calculateTotalAmount()">
+        </div>
+      </div>
+
+      <div style="border-top: 2px dashed var(--header-border); padding-top: 1.5rem; margin-bottom: 1.5rem; text-align: center;">
+        <div style="font-size: 1rem; color: var(--text-muted);">Total Amount Payable</div>
+        <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary);" id="total-amount-display">₹1.00</div>
+      </div>
+
+      <div id="payment-buttons" style="display: flex; flex-direction: column; gap: 10px;">
+        <button id="btn-pay-online" class="btn btn-primary" style="padding: 0.82rem; font-size: 1.1rem;" onclick="processPayment('online')">💳 Pay Online (UPI / Card)</button>
+        <button id="btn-pay-counter" class="btn btn-secondary" style="padding: 0.82rem; font-size: 1.1rem;" onclick="processPayment('counter')">💵 Pay at Counter (Cash)</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: STATUS TRACKING -->
+    <div id="step-status" class="card" style="display: none; text-align: center; padding: 3rem 1.5rem;">
+      <div id="status-icon" style="font-size: 4rem; margin-bottom: 1rem;">⏳</div>
+      <h2 id="status-headline" style="color: var(--text-main); margin-bottom: 0.5rem;">File in Queue!</h2>
+      <p id="status-subtext" style="color: var(--text-muted); margin-bottom: 1.5rem;">Your document is queued for printing. Please wait near the printer...</p>
+
+      <div id="status-loader-wrap">
+        <div class="loader"></div>
+      </div>
+      
+      <div style="margin-top: 2rem; background: var(--bg-color); padding: 1rem; border-radius: 8px; font-size: 0.9rem; color: var(--text-muted);">
+        Job ID: <strong id="job-id-display" style="color: var(--text-main);">...</strong>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const pathParts = window.location.pathname.split('/');
+    const shopId = pathParts[pathParts.length - 1];
+    let shopData = null;
+    let currentJob = null;
+    let pollInterval = null;
+
+    loadShopInfo();
+
+    async function loadShopInfo() {
+      try {
+        const res = await fetch('/api/shop/' + shopId);
+        if (!res.ok) {
+          const err = await res.json();
+          showError(err.error || 'Shop info not found');
+          return;
+        }
+        shopData = await res.json();
+        document.getElementById('shop-name').innerText = shopData.name;
+        document.getElementById('shop-name-badge').innerText = shopData.name;
+        document.getElementById('rate-bw').innerText = '₹' + shopData.bw_price;
+        document.getElementById('rate-color').innerText = '₹' + shopData.color_price;
+
+        if (shopData.payment_mode === 'online') {
+          document.getElementById('btn-pay-counter').style.display = 'none';
+        } else if (shopData.payment_mode === 'counter') {
+          document.getElementById('btn-pay-online').style.display = 'none';
+        }
+      } catch (e) {
+        showError('Network error connecting to shop server.');
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById('step-upload').style.display = 'none';
+      document.getElementById('error-view').style.display = 'block';
+      document.getElementById('error-text').innerText = msg;
+    }
+
+    async function handleFileSelect(file) {
+      if (!file) return;
+      document.getElementById('drop-area').style.display = 'none';
+      document.getElementById('upload-progress').style.display = 'block';
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/api/upload/' + shopId, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+        currentJob = data;
+        document.getElementById('uploaded-filename').innerText = data.original_name;
+        document.getElementById('detected-pages-badge').innerText = data.pages + ' Page(s) Detected';
+        document.getElementById('input-bw-pages').value = data.pages;
+        document.getElementById('input-color-pages').value = 0;
+
+        calculateTotalAmount();
+
+        document.getElementById('step-upload').style.display = 'none';
+        document.getElementById('step-configure').style.display = 'block';
+      } catch (err) {
+        alert(err.message);
+        document.getElementById('drop-area').style.display = 'block';
+        document.getElementById('upload-progress').style.display = 'none';
+      }
+    }
+
+    function calculateTotalAmount() {
+      const bw = parseInt(document.getElementById('input-bw-pages').value) || 0;
+      const color = parseInt(document.getElementById('input-color-pages').value) || 0;
+      const amount = (bw * shopData.bw_price) + (color * shopData.color_price);
+      document.getElementById('total-amount-display').innerText = '₹' + amount.toFixed(2);
+    }
+
+    async function processPayment(mode) {
+      const bw_pages = document.getElementById('input-bw-pages').value;
+      const color_pages = document.getElementById('input-color-pages').value;
+
+      try {
+        const res = await fetch('/api/job/configure', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            job_id: currentJob.job_id,
+            bw_pages,
+            color_pages,
+            payment_mode: mode
+          })
+        });
+        const data = await res.json();
+
+        if (mode === 'counter') {
+          await fetch('/api/job/counter-confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ job_id: currentJob.job_id })
+          });
+          startStatusTracking('Counter Cash Payment Confirmed!');
+        } else {
+          if (data.phonepe_url) {
+            window.location.href = data.phonepe_url;
+          } else if (data.razorpay_order_id) {
+            const options = {
+              key: data.razorpay_key || 'rzp_test_mockkeyid',
+              amount: data.amount * 100,
+              currency: 'INR',
+              name: shopData.name,
+              description: 'Print Payment',
+              order_id: data.razorpay_order_id,
+              handler: async function (response) {
+                await fetch('/api/job/verify-payment', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    job_id: currentJob.job_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_signature: response.razorpay_signature
+                  })
+                });
+                startStatusTracking('Payment Received!');
+              }
+            };
+
+            if (data.razorpay_order_id.startsWith('ord_cust_')) {
+              setTimeout(async () => {
+                await fetch('/api/job/verify-payment', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    job_id: currentJob.job_id,
+                    razorpay_payment_id: 'pay_mock_' + Math.random().toString(36).substring(7),
+                    razorpay_order_id: data.razorpay_order_id,
+                    razorpay_signature: ''
+                  })
+                });
+                startStatusTracking('Payment Received!');
+              }, 1000);
+            } else {
+              const rzp = new Razorpay(options);
+              rzp.open();
+            }
+          }
+        }
+      } catch (e) {
+        alert('Error processing payment: ' + e.message);
+      }
+    }
+
+    function startStatusTracking(msg) {
+      document.getElementById('step-configure').style.display = 'none';
+      document.getElementById('step-status').style.display = 'block';
+      document.getElementById('job-id-display').innerText = currentJob.job_id;
+
+      pollJobStatus();
+      pollInterval = setInterval(pollJobStatus, 5000);
+    }
+
+    async function pollJobStatus() {
+      try {
+        const res = await fetch('/api/agent/job-status/' + currentJob.job_id);
+        const data = await res.json();
+
+        if (data.print_status === 'done') {
+          clearInterval(pollInterval);
+          document.getElementById('status-icon').innerText = '✅';
+          document.getElementById('status-headline').innerText = 'Print Complete!';
+          document.getElementById('status-subtext').innerText = 'Your document has printed. Please collect it from the printer tray.';
+          document.getElementById('status-loader-wrap').style.display = 'none';
+        } else if (data.print_status === 'printing') {
+          document.getElementById('status-icon').innerText = '🖨️';
+          document.getElementById('status-headline').innerText = 'Printing in Progress...';
+          document.getElementById('status-subtext').innerText = 'The printer is currently outputting your document...';
+        } else if (data.print_status === 'failed') {
+          clearInterval(pollInterval);
+          document.getElementById('status-icon').innerText = '❌';
+          document.getElementById('status-headline').innerText = 'Print Failed';
+          document.getElementById('status-subtext').innerText = 'Please contact shop owner (Paper out or printer offline).';
+          document.getElementById('status-loader-wrap').style.display = 'none';
+        }
+      } catch (e) {}
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shop Registration - QRPrint</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="/firebase-config.js"></script>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <!-- LEFT SIDE: LOGO ONLY -->
+      <div class="nav-left">
+        <a href="/" class="logo">🖨️ QRPrint</a>
+      </div>
+
+      <!-- MIDDLE SIDE: PRICING & ABOUT US -->
+      <div class="nav-center">
+        <a href="/dashboard">Pricing</a>
+        <a href="/" onclick="openCompanyModal('about')">About Us</a>
+      </div>
+
+      <!-- RIGHT SIDE: THEME TOGGLE + LOGIN + SIGN UP -->
+      <div class="nav-right" id="nav-auth-container">
+        <button class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle Dark/Light Theme">🌙</button>
+        <a href="/admin" class="btn btn-outline">Already Registered? Login</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" style="max-width: 700px;">
+    <div class="card">
+      <h2 style="text-align: center; margin-bottom: 1.5rem; color: var(--text-main);">Register New Shop 🏪</h2>
+      <div id="error-msg" style="color: var(--danger); display: none; margin-bottom: 1rem; text-align: center; font-weight: 600;"></div>
+
+      <!-- Section 1: Basic Info -->
+      <div class="form-group">
+        <label>Shop Name *</label>
+        <input type="text" id="name" class="form-control" placeholder="e.g. Sharma Digital Print Shop" required>
+      </div>
+
+      <div class="form-group">
+        <label>Printer Model</label>
+        <select id="printer" class="form-control">
+          <option value="Auto Detect">Auto Detect (Windows Default)</option>
+          <option value="HP LaserJet P1102">HP LaserJet P1102</option>
+          <option value="HP LaserJet Pro M126nw">HP LaserJet Pro M126nw</option>
+          <option value="HP Ink Tank 315">HP Ink Tank 315</option>
+          <option value="HP Smart Tank 515">HP Smart Tank 515</option>
+          <option value="Epson EcoTank L3150">Epson EcoTank L3150</option>
+          <option value="Epson EcoTank L3250">Epson EcoTank L3250</option>
+          <option value="Epson L130">Epson L130</option>
+          <option value="Canon Pixma G2010">Canon Pixma G2010</option>
+          <option value="Canon Pixma G3010">Canon Pixma G3010</option>
+          <option value="Canon imageCLASS MF244dw">Canon imageCLASS MF244dw</option>
+          <option value="Brother DCP-L2541DW">Brother DCP-L2541DW</option>
+          <option value="Brother HL-L2321D">Brother HL-L2321D</option>
+          <option value="Brother DCP-T420W">Brother DCP-T420W</option>
+          <option value="Samsung ML-2163">Samsung ML-2163</option>
+          <option value="Ricoh SP 210">Ricoh SP 210</option>
+          <option value="Xerox Phaser 3020">Xerox Phaser 3020</option>
+          <option value="Kyocera ECOSYS FS-1025">Kyocera ECOSYS FS-1025</option>
+          <option value="Pantum P2500W">Pantum P2500W</option>
+          <option value="Konica Minolta bizhub 205i">Konica Minolta bizhub 205i</option>
+          <option value="Other / Generic Printer">Other / Generic Printer</option>
+        </select>
+      </div>
+
+      <!-- Section 2: Contact -->
+      <div class="form-group">
+        <label>Shop Address</label>
+        <input type="text" id="address" class="form-control" placeholder="e.g. Shop 12, Main Market, Delhi">
+      </div>
+
+      <div class="form-group">
+        <label>Mobile Number</label>
+        <input type="tel" id="phone" class="form-control" placeholder="9876543210">
+      </div>
+
+      <!-- Section 3: Pricing -->
+      <div style="display: flex; gap: 1rem;">
+        <div class="form-group" style="flex: 1;">
+          <label>B&W Print Rate (₹ per page)</label>
+          <input type="number" id="bw_price" class="form-control" value="1" step="0.5" min="0">
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label>Color Print Rate (₹ per page)</label>
+          <input type="number" id="color_price" class="form-control" value="5" step="0.5" min="0">
+        </div>
+      </div>
+
+      <!-- Section 4: Payment Mode -->
+      <div class="form-group">
+        <label>Customer Payment Options</label>
+        <div class="radio-card-group">
+          <div class="radio-card selected" onclick="selectPaymentMode('both', this)">
+            <strong>Both</strong><br><small>Online + Cash</small>
+          </div>
+          <div class="radio-card" onclick="selectPaymentMode('online', this)">
+            <strong>Online Only</strong><br><small>UPI Payment</small>
+          </div>
+          <div class="radio-card" onclick="selectPaymentMode('counter', this)">
+            <strong>Counter Only</strong><br><small>Cash at Shop</small>
+          </div>
+        </div>
+        <input type="hidden" id="payment_mode" value="both">
+      </div>
+
+      <!-- Section 5: Payment Gateway -->
+      <div class="form-group" id="gateway-section">
+        <label>Payment Gateway Settings</label>
+        <div class="radio-card-group" style="margin-bottom: 1rem;">
+          <div class="radio-card selected" onclick="selectGateway('razorpay', this)">
+            <strong>Razorpay</strong>
+          </div>
+          <div class="radio-card" onclick="selectGateway('phonepe', this)">
+            <strong>PhonePe</strong>
+          </div>
+        </div>
+        <input type="hidden" id="gateway" value="razorpay">
+
+        <div id="razorpay-fields">
+          <div class="form-group">
+            <label>Razorpay Key ID</label>
+            <input type="text" id="razorpay_key_id" class="form-control" placeholder="rzp_live_xxxxxxxx">
+          </div>
+          <div class="form-group">
+            <label>Razorpay Key Secret</label>
+            <input type="password" id="razorpay_key_secret" class="form-control" placeholder="Secret Key">
+          </div>
+          <small style="color: var(--text-muted);">Don't have an account? <a href="https://razorpay.com" target="_blank">Razorpay Sign Up</a></small>
+        </div>
+
+        <div id="phonepe-fields" style="display: none;">
+          <div class="form-group">
+            <label>PhonePe Merchant ID</label>
+            <input type="text" id="phonepe_merchant_id" class="form-control" placeholder="MERCHANTUAT">
+          </div>
+          <div class="form-group">
+            <label>PhonePe Salt Key</label>
+            <input type="password" id="phonepe_salt_key" class="form-control" placeholder="Salt Key">
+          </div>
+          <div class="form-group">
+            <label>PhonePe Salt Index</label>
+            <input type="text" id="phonepe_salt_index" class="form-control" value="1">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 6: Password -->
+      <div class="form-group">
+        <label>Admin Login Password *</label>
+        <input type="password" id="password" class="form-control" placeholder="Choose your secret password" required>
+      </div>
+
+      <!-- Section 7: Setup Fee Display -->
+      <div style="background: var(--bg-color); padding: 1rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;">
+        <div style="font-size: 0.9rem; color: var(--text-muted);">One-time Setup Fee</div>
+        <div style="font-size: 1.5rem; font-weight: 800; color: var(--primary);">
+          <span style="text-decoration: line-through; color: var(--text-muted); font-size: 1.1rem; margin-right: 8px;" id="setup-actual">₹999</span>
+          <span id="setup-offer">₹1</span>
+        </div>
+      </div>
+
+      <button id="register-btn" class="btn btn-primary" style="width: 100%; font-size: 1.1rem; padding: 0.8rem;" onclick="handleRegister()">Pay Setup Fee & Register</button>
+    </div>
+  </main>
+
+  <!-- Company Policy Info Modal -->
+  <div class="modal-overlay" id="company-modal">
+    <div class="modal-card modal-card-large">
+      <button class="modal-close" onclick="closeCompanyModal()">&times;</button>
+      <h2 id="company-modal-title" style="color: var(--text-main); margin-bottom: 1rem;">...</h2>
+      <div id="company-modal-body" style="line-height: 1.7; color: var(--text-main);">...</div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <a href="/" class="footer-logo">🖨️ QRPrint</a>
+        <div class="footer-tagline">Wireless Cloud Printing & PDF Toolkit</div>
+        <p>India's premier wireless cloud printing system.</p>
+        
+        <div class="social-links">
+          <a href="#" class="social-icon" title="Twitter"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg></a>
+          <a href="#" class="social-icon" title="Facebook"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></a>
+          <a href="#" class="social-icon" title="Instagram"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>
+          <a href="#" class="social-icon" title="YouTube"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg></a>
+          <a href="#" class="social-icon" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a>
+          <a href="#" class="social-icon" title="LinkedIn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg></a>
+        </div>
+
+        <div class="razorpay-badge">🛡️ SECURED BY RAZORPAY</div>
+      </div>
+      <div class="footer-column">
+        <h4>Partner</h4>
+        <ul>
+          <li><a href="https://www.swagchup.in/" target="_blank">Merge PDFs ↗</a></li>
+          <li><a href="https://www.swagchup.in/" target="_blank">Split PDFs ↗</a></li>
+          <li><a href="https://www.swagchup.in/" target="_blank">Convert PDF ↗</a></li>
+          <li><a href="https://www.swagchup.in/" target="_blank">Secure PDF ↗</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/" onclick="openCompanyModal('about')">About Us</a></li>
+          <li><a href="/dashboard">Pricing</a></li>
+          <li><a href="/" onclick="openCompanyModal('privacy')">Privacy Policy</a></li>
+          <li><a href="/" onclick="openCompanyModal('terms')">Terms of Service</a></li>
+          <li><a href="/" onclick="openCompanyModal('refund')">Refund Policy</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Get in Touch</h4>
+        <ul>
+          <li><a href="mailto:support@qrprint.in">✉️ Support Ticket</a></li>
+          <li><a href="https://wa.me/919876543210" target="_blank">📞 WhatsApp Support</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div>&copy; 2026 QRPrint. Built with pride from India 🇮🇳</div>
+    </div>
+  </footer>
+
+  <script>
+    function initTheme() {
+      const savedTheme = localStorage.getItem('qr_theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      document.getElementById('theme-btn').innerText = savedTheme === 'dark' ? '☀️' : '🌙';
+    }
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('qr_theme', next);
+      document.getElementById('theme-btn').innerText = next === 'dark' ? '☀️' : '🌙';
+    }
+    initTheme();
+
+    fetch('/api/pricing')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('setup-actual').innerText = '₹' + data.actual_price;
+        document.getElementById('setup-offer').innerText = '₹' + data.offer_price;
+      });
+
+    const companyContent = {
+      about: {
+        title: "About Us 🏢",
+        html: `<p><strong>QRPrint</strong> is India's leading wireless cloud printing infrastructure designed specifically for print shop owners (xerox shops, cyber cafes, and stationery stores) and their customers.</p>
+               <br><p>Our mission is to eliminate USB drives, Bluetooth pairing delays, and wire connections by offering a 100% cloud-automated printing ecosystem. Shop owners display a unique QR code outside their premises; customers scan, upload documents securely, pay online or at the counter, and documents automatically print directly on the shop's printer in seconds.</p>`
+      },
+      privacy: {
+        title: "Privacy Policy 🛡️",
+        html: `<p>At <strong>QRPrint</strong>, we prioritize the utmost security and confidentiality of your documents.</p>
+               <br><h4>1. Document Confidentiality</h4>
+               <p>Uploaded documents (PDFs, images, Word docs) are strictly used for instant printing tasks. All uploaded files are automatically and permanently purged from our storage servers within 24 hours.</p>
+               <br><h4>2. Data Protection</h4>
+               <p>We do not share, sell, or analyze your personal document contents. Payments are processed through bank-grade secured payment gateways (Razorpay / PhonePe).</p>`
+      },
+      terms: {
+        title: "Terms of Service 📜",
+        html: `<p>By accessing or registering with <strong>QRPrint</strong>, you agree to the following terms:</p>
+               <br><h4>1. Usage Terms</h4>
+               <p>Print shop owners must maintain active print agent software on their connected Windows PCs to process incoming print queues.</p>
+               <br><h4>2. Prohibited Content</h4>
+               <p>Users must not upload illegal, fraudulent, or unauthorized copyrighted material for printing.</p>`
+      },
+      refund: {
+        title: "Refund Policy 💸",
+        html: `<p>We strive to ensure complete customer and shop owner satisfaction.</p>
+               <br><h4>1. Setup Fee Refunds</h4>
+               <p>Shop owners are eligible for a full refund of their initial setup fee within 7 days of registration if technical integration assistance is unsuccessful.</p>
+               <br><h4>2. Print Job Adjustments</h4>
+               <p>If a print job fails due to printer hardware offline status or paper jam, payment is held in queue until resolved or marked for cash counter reconciliation.</p>`
+      }
+    };
+
+    function openCompanyModal(type) {
+      const data = companyContent[type];
+      if (data) {
+        document.getElementById('company-modal-title').innerHTML = data.title;
+        document.getElementById('company-modal-body').innerHTML = data.html;
+        document.getElementById('company-modal').classList.add('active');
+      }
+    }
+    function closeCompanyModal() {
+      document.getElementById('company-modal').classList.remove('active');
+    }
+
+    function selectPaymentMode(mode, el) {
+      document.querySelectorAll('#payment_mode ~ .radio-card-group .radio-card, .radio-card-group:nth-of-type(1) .radio-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      document.getElementById('payment_mode').value = mode;
+      
+      const gatewaySec = document.getElementById('gateway-section');
+      if (mode === 'counter') {
+        gatewaySec.style.display = 'none';
+      } else {
+        gatewaySec.style.display = 'block';
+      }
+    }
+
+    function selectGateway(gw, el) {
+      document.querySelectorAll('#gateway-fields ~ .radio-card-group .radio-card, #gateway-section .radio-card-group .radio-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      document.getElementById('gateway').value = gw;
+      if (gw === 'razorpay') {
+        document.getElementById('razorpay-fields').style.display = 'block';
+        document.getElementById('phonepe-fields').style.display = 'none';
+      } else {
+        document.getElementById('razorpay-fields').style.display = 'none';
+        document.getElementById('phonepe-fields').style.display = 'block';
+      }
+    }
+
+    async function handleRegister() {
+      const errorMsg = document.getElementById('error-msg');
+      errorMsg.style.display = 'none';
+
+      const name = document.getElementById('name').value.trim();
+      const password = document.getElementById('password').value.trim();
+      if (!name || !password) {
+        errorMsg.innerText = 'Shop name and password are required!';
+        errorMsg.style.display = 'block';
+        return;
+      }
+
+      const body = {
+        name,
+        printer: document.getElementById('printer').value,
+        address: document.getElementById('address').value,
+        phone: document.getElementById('phone').value,
+        bw_price: document.getElementById('bw_price').value,
+        color_price: document.getElementById('color_price').value,
+        payment_mode: document.getElementById('payment_mode').value,
+        gateway: document.getElementById('gateway').value,
+        razorpay_key_id: document.getElementById('razorpay_key_id').value,
+        razorpay_key_secret: document.getElementById('razorpay_key_secret').value,
+        phonepe_merchant_id: document.getElementById('phonepe_merchant_id').value,
+        phonepe_salt_key: document.getElementById('phonepe_salt_key').value,
+        phonepe_salt_index: document.getElementById('phonepe_salt_index').value,
+        password
+      };
+
+      const btn = document.getElementById('register-btn');
+      btn.disabled = true;
+      btn.innerText = 'Processing...';
+
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Registration failed');
+        }
+
+        const options = {
+          key: data.razorpay_key,
+          amount: data.amount * 100,
+          currency: 'INR',
+          name: 'QRPrint',
+          description: 'One-Time Setup Fee for ' + name,
+          order_id: data.razorpay_order_id,
+          handler: async function (response) {
+            await fetch('/api/verify-setup-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                shop_id: data.shop_id,
+                razorpay_payment_id: response.razorpay_payment_id || 'pay_mock_123',
+                razorpay_order_id: response.razorpay_order_id || data.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature || ''
+              })
+            });
+            alert('🎉 Registration Successful! Your Shop ID is: ' + data.shop_id + '\nRedirecting to login...');
+            window.location.href = '/admin';
+          },
+          modal: {
+            ondismiss: function() {
+              btn.disabled = false;
+              btn.innerText = 'Pay Setup Fee & Register';
+            }
+          }
+        };
+
+        if (data.razorpay_order_id.startsWith('order_mock_')) {
+          setTimeout(async () => {
+            await fetch('/api/verify-setup-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                shop_id: data.shop_id,
+                razorpay_payment_id: 'pay_mock_' + Math.random().toString(36).substring(7),
+                razorpay_order_id: data.razorpay_order_id,
+                razorpay_signature: ''
+              })
+            });
+            alert('🎉 Registration Successful! Your Shop ID is: ' + data.shop_id + '\nRedirecting to login...');
+            window.location.href = '/admin';
+          }, 1000);
+        } else {
+          const rzp = new Razorpay(options);
+          rzp.open();
+        }
+
+      } catch (err) {
+        errorMsg.innerText = err.message;
+        errorMsg.style.display = 'block';
+        btn.disabled = false;
+        btn.innerText = 'Pay Setup Fee & Register';
+      }
+    }
+  </script>
+</body>
+</html>
