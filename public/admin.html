@@ -259,6 +259,8 @@
     }
 
     async function handleGoogleLogin() {
+      const err = document.getElementById('login-error');
+      err.classList.add('hidden');
       try {
         if (typeof firebase === 'undefined' || !firebase.auth) {
           throw new Error('Firebase SDK loading. Please try again.');
@@ -267,11 +269,20 @@
         const result = await firebase.auth().signInWithPopup(provider);
         const user = result.user;
         if (user && user.email) {
-          document.getElementById('loginId').value = user.email;
-          alert('✅ Google Account verified (' + user.email + '). Please enter your shop password to access dashboard.');
+          const res = await fetch('/api/auth/google-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: user.email })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Google login failed');
+
+          showDashboard(data.shop);
         }
       } catch (err) {
-        alert('Google Login Notice: ' + err.message);
+        const errDiv = document.getElementById('login-error');
+        errDiv.innerText = err.message;
+        errDiv.classList.remove('hidden');
       }
     }
 

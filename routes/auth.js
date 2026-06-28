@@ -50,6 +50,36 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// POST /api/auth/google-login -> Direct shop owner login via verified Google Email
+router.post('/google-login', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Google email is required' });
+
+    let shop = await Shop.findOne({ email: email.toLowerCase() });
+    if (!shop) {
+      const allShops = await Shop.find();
+      shop = allShops.find(s => s.email && s.email.toLowerCase() === email.toLowerCase());
+    }
+
+    if (!shop) {
+      return res.status(404).json({ error: `No registered shop found for ${email}. Please register your shop first.` });
+    }
+
+    req.session.shopId = shop.shopId;
+    req.session.shopObjectId = shop._id;
+
+    const shopObj = shop.toObject();
+    delete shopObj.password;
+    delete shopObj.razorpayKeySecret;
+    delete shopObj.phonepeSaltKey;
+
+    res.json({ success: true, shop: shopObj });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/auth/logout
 router.post('/logout', (req, res) => {
   req.session.destroy(err => {
