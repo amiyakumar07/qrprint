@@ -219,19 +219,17 @@
           }
         };
 
-        if (data.razorpayOrderId.startsWith('order_mock_')) {
-          setTimeout(async () => {
-            await fetch('/api/shop/setup-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ shopId: data.shopId, razorpayPaymentId: 'pay_mock_123' })
-            });
-            showSuccess(data.shopId);
-          }, 800);
-        } else {
-          const rzp = new Razorpay(options);
-          rzp.open();
+        if (data.razorpayOrderId && data.razorpayOrderId.startsWith('order_mock_')) {
+          delete options.order_id;
         }
+
+        const rzp = new Razorpay(options);
+        rzp.on('payment.failed', function (response) {
+          alert('Payment Failed: ' + (response.error.description || 'Transaction declined'));
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-credit-card"></i> Pay Setup Fee & Register';
+        });
+        rzp.open();
       } catch (err) {
         document.getElementById('error-text').innerText = err.message;
         errAlert.classList.remove('hidden');

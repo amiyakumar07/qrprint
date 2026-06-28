@@ -13,12 +13,15 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Shop ID / Email and password are required' });
     }
 
-    const shop = await Shop.findOne({
-      $or: [
-        { shopId: identifier },
-        { email: identifier.toLowerCase() }
-      ]
-    });
+    let shop = await Shop.findOne({ shopId: identifier });
+    if (!shop) {
+      shop = await Shop.findOne({ email: identifier.toLowerCase() });
+    }
+    if (!shop) {
+      // Try finding in all shops list as fallback
+      const allShops = await Shop.find();
+      shop = allShops.find(s => s.shopId === identifier || (s.email && s.email.toLowerCase() === identifier.toLowerCase()));
+    }
 
     if (!shop) {
       return res.status(401).json({ error: 'Shop account not found' });
