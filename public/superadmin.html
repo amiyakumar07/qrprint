@@ -48,6 +48,10 @@
         </div>
         <button type="submit" class="w-full py-3 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-sm transition-all shadow-lg">Login to Platform Control</button>
       </form>
+      <div class="mt-4 p-3 bg-gray-950/80 rounded-xl border border-gray-800 text-center">
+        <p class="text-xs text-gray-400">Default Credentials:</p>
+        <p class="text-xs font-mono text-violet-400 font-semibold mt-0.5">ID: admin | Pass: StrongPasswordHere123!</p>
+      </div>
     </div>
 
     <!-- PANEL CONTENT -->
@@ -118,6 +122,17 @@
   </main>
 
   <script>
+    checkSaSession();
+
+    async function checkSaSession() {
+      try {
+        const res = await fetch('/api/superadmin/stats');
+        if (res.ok) {
+          showPanel();
+        }
+      } catch (e) {}
+    }
+
     async function handleSaLogin(e) {
       e.preventDefault();
       const adminId = document.getElementById('saId').value.trim();
