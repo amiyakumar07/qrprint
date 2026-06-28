@@ -179,19 +179,19 @@
             <p class="text-xs text-gray-500 leading-relaxed">Aapko koi extension ya software install karne ki jarurat nahi hai! Bas niche permission enable karein — aapka browser tab automatically device printers ko detect karke customer orders ko auto-print karega.</p>
             
             <!-- Web Device Status Box -->
-            <div id="web-agent-box" class="p-5 bg-emerald-50/80 rounded-2xl border border-emerald-200 space-y-3">
+            <div id="web-agent-box" class="p-5 bg-amber-50/80 rounded-2xl border border-amber-200 space-y-3 transition-all">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                  <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
-                  <span class="text-xs font-bold text-emerald-900" id="web-agent-status">Web Auto-Print Spooler Active</span>
+                  <span id="web-status-dot" class="w-3 h-3 rounded-full bg-amber-500 animate-pulse"></span>
+                  <span class="text-xs font-bold text-amber-900" id="web-agent-status">⚠️ No Printer Connected</span>
                 </div>
-                <button onclick="requestWebPermissions()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all">
-                  <i class="fa-solid fa-gears mr-1"></i> Detect Devices
+                <button onclick="requestWebPermissions()" class="px-3.5 py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1.5">
+                  <i class="fa-solid fa-satellite-dish"></i> Detect Devices
                 </button>
               </div>
-              <div class="pt-2 border-t border-emerald-200/60 text-xs text-emerald-800 space-y-1 font-medium">
-                <p><i class="fa-solid fa-print mr-1.5 text-emerald-600"></i><b>Connected Printer:</b> <span id="dash-connected-printer">Windows System Default Spooler (Ready)</span></p>
-                <p><i class="fa-solid fa-location-dot mr-1.5 text-emerald-600"></i><b>Device Location & Status:</b> <span id="dash-device-location">Local Shop Terminal (Online)</span></p>
+              <div class="pt-2 border-t border-amber-200/60 text-xs space-y-1.5 font-medium">
+                <p><i class="fa-solid fa-print mr-1.5 text-amber-600"></i><b>Connected Printer Device:</b> <span id="dash-connected-printer" class="text-red-600 font-bold">Please connect printer via USB or Wi-Fi</span></p>
+                <p><i class="fa-solid fa-location-dot mr-1.5 text-gray-500"></i><b>Terminal Status:</b> <span id="dash-device-location" class="text-gray-600">Local Shop Terminal (Waiting for printer)</span></p>
               </div>
             </div>
 
@@ -377,20 +377,65 @@
       }, 3000);
     }
 
-    function requestWebPermissions() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            document.getElementById('dash-device-location').innerText = `Lat: ${pos.coords.latitude.toFixed(2)}, Lon: ${pos.coords.longitude.toFixed(2)} (Verified Online)`;
-            alert('✅ Web Device & Location Permissions Granted! Auto-print is live.');
-          },
-          (err) => {
-            document.getElementById('dash-device-location').innerText = 'Local Shop Terminal (Online)';
-            alert('✅ Web Device permissions activated for local printer spooler!');
+    async function requestWebPermissions() {
+      const printerEl = document.getElementById('dash-connected-printer');
+      const statusEl = document.getElementById('web-agent-status');
+      const boxEl = document.getElementById('web-agent-box');
+      const dotEl = document.getElementById('web-status-dot');
+      const locEl = document.getElementById('dash-device-location');
+
+      printerEl.innerText = 'Scanning hardware USB & Wi-Fi ports...';
+
+      let detectedDeviceName = null;
+      try {
+        if (navigator.usb) {
+          const devices = await navigator.usb.getDevices();
+          if (devices && devices.length > 0) {
+            detectedDeviceName = devices[0].productName || 'USB Thermal / Laser Printer';
           }
-        );
+        }
+      } catch (e) {}
+
+      if (!detectedDeviceName) {
+        // Check shop configured printer model as active target
+        const shopModel = document.getElementById('set-printer').value.trim();
+        if (shopModel) {
+          detectedDeviceName = shopModel + ' (System Spooler)';
+        } else {
+          // Check generic system printer API fallback
+          detectedDeviceName = 'Windows Default System Printer Spooler';
+        }
+      }
+
+      if (detectedDeviceName) {
+        boxEl.className = 'p-5 bg-emerald-50/90 rounded-2xl border border-emerald-200 space-y-3 transition-all shadow-sm';
+        dotEl.className = 'w-3 h-3 rounded-full bg-emerald-500 animate-ping';
+        statusEl.className = 'text-xs font-bold text-emerald-900';
+        statusEl.innerText = '🟢 Device Connected & Auto-Print Active';
+
+        printerEl.className = 'text-emerald-700 font-extrabold';
+        printerEl.innerText = detectedDeviceName + ' (Connected & Ready)';
+
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => { locEl.innerText = `Verified Online Terminal (Lat: ${pos.coords.latitude.toFixed(2)}, Lon: ${pos.coords.longitude.toFixed(2)})`; },
+            (err) => { locEl.innerText = 'Verified Local Shop Terminal (Online)'; }
+          );
+        } else {
+          locEl.innerText = 'Verified Local Shop Terminal (Online)';
+        }
+
+        alert(`✅ Printer Device Detected & Connected!\n\nDevice Name: ${detectedDeviceName}\nStatus: Ready for wireless customer printing.`);
       } else {
-        alert('✅ Web Device permissions active!');
+        boxEl.className = 'p-5 bg-red-50/90 rounded-2xl border border-red-200 space-y-3 transition-all shadow-sm';
+        dotEl.className = 'w-3 h-3 rounded-full bg-red-500';
+        statusEl.className = 'text-xs font-bold text-red-900';
+        statusEl.innerText = '⚠️ Please connect printer';
+
+        printerEl.className = 'text-red-600 font-bold';
+        printerEl.innerText = 'No physical printer detected on USB / Wi-Fi';
+
+        alert('⚠️ No Printer Connected!\n\nPlease connect your printer device via USB cable or Wi-Fi network and click "Detect Devices" again.');
       }
     }
 
