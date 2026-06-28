@@ -146,6 +146,10 @@
               <div class="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center text-sm"><i class="fa-solid fa-wallet"></i></div>
             </div>
             <p class="text-3xl font-extrabold text-gray-900" id="st-total-earnings">₹0</p>
+            <div class="mt-2 flex items-center justify-between text-[11px] font-semibold pt-2 border-t border-gray-100">
+              <span class="text-emerald-600"><i class="fa-solid fa-globe mr-1"></i>Online: <span id="st-online-earnings">₹0</span></span>
+              <span class="text-amber-600"><i class="fa-solid fa-store mr-1"></i>Counter: <span id="st-counter-earnings">₹0</span></span>
+            </div>
           </div>
         </div>
       </div>
@@ -163,18 +167,21 @@
           </div>
 
           <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-4">
-            <h3 class="text-base font-bold text-gray-800">Windows Print Agent Setup 💻</h3>
-            <p class="text-xs text-gray-500 leading-relaxed">Apne printer wale Windows PC par humara Print Agent script chalaein. Yeh automatically cloud jobs ko pick karke print karta hai.</p>
+            <div class="flex items-center justify-between">
+              <h3 class="text-base font-bold text-gray-800">Universal Browser Extension Agent 🧩</h3>
+              <span class="px-2.5 py-1 bg-violet-100 text-violet-700 text-xs font-bold rounded-full">No Python Needed</span>
+            </div>
+            <p class="text-xs text-gray-500 leading-relaxed">Chrome, Edge, Brave, ya Firefox extension install karein. Yeh browser script command-line script se extra easy hai — automatic printer detect aur automatic print execution bina server disconnect ke!</p>
             <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-2 text-xs">
-              <p class="font-bold text-gray-700">Quick Installation Steps:</p>
+              <p class="font-bold text-gray-700">3-Step Extension Installation:</p>
               <ol class="list-decimal list-inside text-gray-600 space-y-1">
-                <li>Windows PC par Python install karein.</li>
-                <li>Terminal mein command chalaein: <code class="bg-gray-200 px-1.5 py-0.5 rounded text-violet-700 font-mono">pip install requests</code></li>
-                <li>Agent script download karke shop ID map karein aur run karein.</li>
+                <li>Browser mein <code class="bg-gray-200 px-1.5 py-0.5 rounded text-violet-700 font-mono">chrome://extensions</code> open karke **Developer mode** ON karein.</li>
+                <li>**Load unpacked** button par click karke humara extension folder select karein.</li>
+                <li>Extension popup open karke apna Shop ID enter karein — Connected!</li>
               </ol>
             </div>
-            <a href="/api/agent/jobs/sample" class="inline-flex items-center justify-center gap-2 w-full py-3.5 bg-gray-800 hover:bg-gray-900 text-white font-bold rounded-xl text-sm transition-all shadow-md">
-              <i class="fa-solid fa-file-code"></i> Download Print Agent Setup Script
+            <a href="/extension/manifest.json" target="_blank" class="inline-flex items-center justify-center gap-2 w-full py-3.5 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-sm transition-all shadow-md">
+              <i class="fa-solid fa-puzzle-piece"></i> View Browser Extension Files
             </a>
           </div>
         </div>
@@ -319,6 +326,12 @@
         document.getElementById('st-today-earnings').innerText = '₹' + (data.todayEarnings || 0);
         document.getElementById('st-total-orders').innerText = data.totalOrders || 0;
         document.getElementById('st-total-earnings').innerText = '₹' + (data.totalEarnings || 0);
+        if (document.getElementById('st-online-earnings')) {
+          document.getElementById('st-online-earnings').innerText = '₹' + (data.onlineEarnings || 0);
+        }
+        if (document.getElementById('st-counter-earnings')) {
+          document.getElementById('st-counter-earnings').innerText = '₹' + (data.counterEarnings || 0);
+        }
       } catch (e) {}
     }
 

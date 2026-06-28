@@ -36,15 +36,26 @@ router.get('/stats', requireShopAuth, async (req, res) => {
       .reduce((sum, j) => sum + (j.amount || 0), 0);
 
     const totalOrders = jobs.length;
-    const totalEarnings = jobs
-      .filter(j => ['paid', 'counter'].includes(j.paymentStatus))
-      .reduce((sum, j) => sum + (j.amount || 0), 0);
+    const paidJobs = jobs.filter(j => ['paid', 'counter'].includes(j.paymentStatus));
+    const totalEarnings = paidJobs.reduce((sum, j) => sum + (j.amount || 0), 0);
+
+    const onlineJobs = paidJobs.filter(j => j.paymentMode === 'online' || j.paymentMode === 'both' || !j.paymentMode);
+    const counterJobs = paidJobs.filter(j => j.paymentMode === 'counter');
+
+    const onlineEarnings = onlineJobs.reduce((sum, j) => sum + (j.amount || 0), 0);
+    const counterEarnings = counterJobs.reduce((sum, j) => sum + (j.amount || 0), 0);
+    const onlineOrders = onlineJobs.length;
+    const counterOrders = counterJobs.length;
 
     res.json({
       todayPrints,
       todayEarnings,
       totalOrders,
-      totalEarnings
+      totalEarnings,
+      onlineEarnings,
+      counterEarnings,
+      onlineOrders,
+      counterOrders
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

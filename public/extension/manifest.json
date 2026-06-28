@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "PrintEase Wireless Auto-Print Agent",
+  "version": "1.0.0",
+  "description": "Universal Cross-Browser Auto-Print Extension for PrintEase Shops. Automatically detects connected printers and prints incoming customer documents.",
+  "permissions": [
+    "storage",
+    "alarms",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "PrintEase Print Agent"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

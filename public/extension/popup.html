@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { width: 300px; font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 16px; background: #0f172a; color: #f8fafc; }
+    .header { font-weight: 800; font-size: 16px; color: #a78bfa; margin-bottom: 12px; display: flex; items-center; justify-content: space-between; }
+    .card { background: #1e293b; border-radius: 12px; padding: 12px; border: 1px solid #334155; margin-bottom: 12px; }
+    label { font-size: 11px; text-transform: uppercase; font-weight: 700; color: #94a3b8; display: block; margin-bottom: 4px; }
+    input { width: 100%; box-sizing: border-box; background: #0f172a; border: 1px solid #334155; padding: 8px 10px; border-radius: 8px; color: #fff; font-size: 13px; outline: none; margin-bottom: 8px; }
+    button { width: 100%; background: #7c3aed; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; }
+    button:hover { background: #6d28d9; }
+    .status { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; margin-top: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; }
+    .dot.active { background: #10b981; box-shadow: 0 0 8px #10b981; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span>🖨️ PrintEase Extension</span>
+    <span style="font-size:10px; background:#334155; padding:2px 6px; border-radius:4px; color:#cbd5e1;">v1.0</span>
+  </div>
+  <div class="card">
+    <label>Shop ID</label>
+    <input type="text" id="shopId" placeholder="e.g. PE-1000">
+    <label>Server URL</label>
+    <input type="text" id="serverUrl" value="http://localhost:3000">
+    <button id="btnSave">Connect Printer Agent</button>
+  </div>
+  <div class="card">
+    <div class="status">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">Agent Disconnected</span>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
