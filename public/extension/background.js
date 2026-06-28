@@ -1,5 +1,14 @@
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
   chrome.alarms.create('pollJobsAlarm', { periodInMinutes: 0.1 });
+  try {
+    const res = await fetch(chrome.runtime.getURL('config.json'));
+    if (res.ok) {
+      const cfg = await res.json();
+      if (cfg.shopId) {
+        chrome.storage.local.set({ shopId: cfg.shopId, serverUrl: cfg.serverUrl || 'http://localhost:3000', isConnected: true });
+      }
+    }
+  } catch (e) {}
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
@@ -16,8 +25,22 @@ chrome.runtime.onMessage.addListener((msg) => {
 
 async function checkAndPrintJobs() {
   chrome.storage.local.get(['shopId', 'serverUrl', 'isConnected'], async (data) => {
-    if (!data.isConnected || !data.shopId) return;
-    const server = data.serverUrl || 'http://localhost:3000';
+    let shopId = data.shopId;
+    let server = data.serverUrl || 'http://localhost:3000';
+    if (!shopId) {
+      try {
+        const res = await fetch(chrome.runtime.getURL('config.json'));
+        if (res.ok) {
+          const cfg = await res.json();
+          shopId = cfg.shopId;
+          server = cfg.serverUrl || server;
+          if (shopId) {
+            chrome.storage.local.set({ shopId, serverUrl: server, isConnected: true });
+          }
+        }
+      } catch (e) {}
+    }
+    if (!shopId) return;
     try {
       const res = await fetch(`${server}/api/agent/jobs/${data.shopId}`);
       if (!res.ok) return;

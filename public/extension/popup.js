@@ -5,19 +5,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusDot = document.getElementById('statusDot');
   const statusText = document.getElementById('statusText');
 
-  chrome.storage.local.get(['shopId', 'serverUrl', 'isConnected'], (res) => {
-    if (res.shopId) shopIdInput.value = res.shopId;
-    if (res.serverUrl) serverUrlInput.value = res.serverUrl;
-    if (res.isConnected && res.shopId) {
+  chrome.storage.local.get(['shopId', 'serverUrl', 'isConnected'], async (res) => {
+    let shopId = res.shopId;
+    let serverUrl = res.serverUrl;
+    if (!shopId) {
+      try {
+        const r = await fetch(chrome.runtime.getURL('config.json'));
+        if (r.ok) {
+          const cfg = await r.json();
+          shopId = cfg.shopId;
+          serverUrl = cfg.serverUrl || 'http://localhost:3000';
+          if (shopId) {
+            chrome.storage.local.set({ shopId, serverUrl, isConnected: true });
+          }
+        }
+      } catch (e) {}
+    }
+    if (shopId) shopIdInput.value = shopId;
+    if (serverUrl) serverUrlInput.value = serverUrl;
+    if (shopId) {
       statusDot.classList.add('active');
       statusText.innerText = 'Connected & Auto-Printing';
-    } else if (res.shopId) {
-      // Auto activate
-      chrome.storage.local.set({ isConnected: true }, () => {
-        statusDot.classList.add('active');
-        statusText.innerText = 'Connected & Auto-Printing';
-        chrome.runtime.sendMessage({ action: 'startPolling' });
-      });
     }
   });
 
