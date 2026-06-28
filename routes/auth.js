@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const QRCode = require('qrcode');
 const { Shop } = require('../models/dbStore');
 
 // POST /api/auth/login -> Shop owner login
@@ -63,7 +64,26 @@ router.post('/google-login', async (req, res) => {
     }
 
     if (!shop) {
-      return res.status(404).json({ error: `No registered shop found for ${email}. Please register your shop first.` });
+      // Auto-create shop profile for Google user so they get logged in to dashboard immediately
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      const shopId = 'PE-' + randomNum;
+      const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+      const customerUrl = `${baseUrl}/shop/${shopId}`;
+      const qrCodeDataUrl = await QRCode.toDataURL(customerUrl);
+      const hashedPassword = await bcrypt.hash('GoogleLoginSecret123!', 10);
+
+      shop = await Shop.create({
+        shopId,
+        shopName: email.split('@')[0] + ' Print Shop',
+        email: email.toLowerCase(),
+        printerModel: 'Auto Detect',
+        bwPrice: 2,
+        colorPrice: 8,
+        password: hashedPassword,
+        qrCodeDataUrl,
+        isActive: true,
+        setupFeePaid: true
+      });
     }
 
     req.session.shopId = shop.shopId;

@@ -20,6 +20,17 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Shop Name and Password are required' });
     }
 
+    if (email) {
+      let existingShop = await Shop.findOne({ email: email.toLowerCase() });
+      if (!existingShop) {
+        const allShops = await Shop.find();
+        existingShop = allShops.find(s => s.email && s.email.toLowerCase() === email.toLowerCase());
+      }
+      if (existingShop) {
+        return res.status(400).json({ error: 'This email is already registered. Please login on the login page or use another email.' });
+      }
+    }
+
     // Generate Shop ID e.g. "PE-1042"
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     const shopId = 'PE-' + randomNum;
