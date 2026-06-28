@@ -1,416 +1,402 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QRPrint - Ultimate Cloud Print & PDF Toolkit</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="stylesheet" href="/style.css">
-  <!-- Firebase Compatibility SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-  <script src="/firebase-config.js"></script>
+  <title>PrintEase — Wireless QR Print System for Indian Print Shops</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            violet: {
+              50:  '#f5f3ff',
+              100: '#ede9fe',
+              200: '#ddd6fe',
+              300: '#c4b5fd',
+              400: '#a78bfa',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+              800: '#5b21b6',
+              900: '#4c1d95',
+            }
+          },
+          animation: {
+            'fade-up':    'fadeUp 0.6s ease forwards',
+            'fade-in':    'fadeIn 0.4s ease forwards',
+            'slide-left': 'slideLeft 0.5s ease forwards',
+            'bounce-in':  'bounceIn 0.5s cubic-bezier(0.36,0.07,0.19,0.97) forwards',
+            'float':      'float 3s ease-in-out infinite',
+            'pulse-ring': 'pulseRing 2s cubic-bezier(0.455,0.03,0.515,0.955) infinite',
+            'spin-slow':  'spin 3s linear infinite',
+            'shimmer':    'shimmer 1.5s linear infinite',
+          },
+          keyframes: {
+            fadeUp:    { '0%': {opacity:'0', transform:'translateY(24px)'}, '100%': {opacity:'1', transform:'translateY(0)'} },
+            fadeIn:    { '0%': {opacity:'0'}, '100%': {opacity:'1'} },
+            slideLeft: { '0%': {opacity:'0', transform:'translateX(-24px)'}, '100%': {opacity:'1', transform:'translateX(0)'} },
+            bounceIn:  { '0%': {transform:'scale(0)'}, '60%': {transform:'scale(1.12)'}, '100%': {transform:'scale(1)'} },
+            float:     { '0%,100%': {transform:'translateY(0)'}, '50%': {transform:'translateY(-12px)'} },
+            pulseRing: { '0%': {boxShadow:'0 0 0 0 rgba(124,58,237,0.4)'}, '70%': {boxShadow:'0 0 0 14px rgba(124,58,237,0)'}, '100%': {boxShadow:'0 0 0 0 rgba(124,58,237,0)'} },
+            shimmer:   { '0%': {backgroundPosition:'-200% 0'}, '100%': {backgroundPosition:'200% 0'} },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-left  { opacity: 0; transform: translateX(-28px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .reveal-left.visible { opacity: 1; transform: translateX(0); }
+    .reveal-right { opacity: 0; transform: translateX(28px);  transition: opacity 0.6s ease, transform 0.6s ease; }
+    .reveal-right.visible { opacity: 1; transform: translateX(0); }
+    .gradient-text { background: linear-gradient(135deg, #a78bfa, #8b5cf6, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hover-lift { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    .hover-lift:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(124,58,237,0.15); }
+    .glass { background: rgba(255,255,255,0.08); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15); }
+    .gradient-border { position: relative; background: linear-gradient(white,white) padding-box, linear-gradient(135deg,#7c3aed,#4f46e5,#0ea5e9) border-box; border: 2px solid transparent; border-radius: 16px; }
+    .btn-ripple { position: relative; overflow: hidden; }
+  </style>
 </head>
-<body>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased overflow-x-hidden">
 
-  <header>
-    <div class="nav-container">
-      <!-- LEFT SIDE: LOGO ONLY -->
-      <div class="nav-left">
-        <a href="/" class="logo"><img src="/logo.jpg" alt="QRPrint" class="brand-logo-img"> QRPrint</a>
-      </div>
+  <!-- HEADER PLACEHOLDER -->
+  <div id="header-placeholder"></div>
 
-      <!-- MIDDLE SIDE: PRICING & ABOUT US -->
-      <div class="nav-center">
-        <a href="/dashboard">Pricing</a>
-        <a href="#" onclick="openCompanyModal('about')">About Us</a>
-      </div>
+  <!-- MAIN CONTENT -->
+  <main>
+    <!-- SECTION 1: HERO -->
+    <section class="relative bg-gradient-to-br from-gray-900 via-violet-900 to-indigo-900 text-white pt-16 pb-24 md:pt-24 md:pb-32 overflow-hidden">
+      <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-violet-600/30 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute bottom-10 right-10 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
-      <!-- RIGHT SIDE: THEME TOGGLE + LOGIN + SIGN UP -->
-      <div class="nav-right" id="nav-auth-container">
-        <button class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle Dark/Light Theme">🌙</button>
-        <a href="#" onclick="openAuthModal('login')" class="btn btn-outline">Login</a>
-        <a href="#" onclick="openAuthModal('signup')" class="btn btn-primary">Sign Up</a>
-      </div>
-    </div>
-  </header>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-8 animate-fade-down shadow-lg border border-violet-400/30">
+          <span class="flex h-2.5 w-2.5 relative">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+          </span>
+          <span class="text-xs font-semibold tracking-wide uppercase text-violet-200">SPECIAL OFFER — 50% OFF LIFETIME ACCESS</span>
+        </div>
 
-  <main class="container">
-    <section class="hero">
-      <h1>Scan QR, Print Instantly! 🚀</h1>
-      <p>Place a unique QR Code outside your print shop. Customers scan with their phone, upload documents securely, and print automatically on your printer. No USB drives, wires, or Bluetooth required!</p>
-      
-      <div class="price-badge">
-        7 Days Promo Offer: <span id="offer-price" style="font-size: 1.6rem; color: var(--primary); font-weight: 800;">₹1</span> (Special Launch Rate)
-      </div>
+        <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight max-w-4xl mx-auto leading-tight mb-6">
+          QR Scan Karo, <span class="gradient-text">Print Lo!</span> 🚀
+        </h1>
+        
+        <p class="text-lg sm:text-xl text-gray-300 max-w-2xl mx-auto font-normal leading-relaxed mb-10">
+          Bina wire, bina computer — sirf QR scan karo aur seconds mein print nikal lo. India's #1 wireless printing ecosystem for print shops.
+        </p>
 
-      <div>
-        <a href="/dashboard" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.85rem 2.2rem;">Setup Shop Now @ ₹1</a>
-        <a href="/admin" class="btn btn-secondary" style="font-size: 1.1rem; padding: 0.85rem 2.2rem;">Shop Owner Dashboard</a>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+          <a href="/dashboard" class="w-full sm:w-auto text-base font-semibold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 px-8 py-4 rounded-full shadow-xl hover:shadow-violet-500/50 transition-all duration-300 hover:-translate-y-1 active:scale-95 animate-pulse-ring">
+            <i class="fa-solid fa-store mr-2"></i>Setup Your Shop →
+          </a>
+          <a href="#how-it-works" class="w-full sm:w-auto text-base font-medium text-gray-300 hover:text-white px-8 py-4 rounded-full glass hover:bg-white/10 transition-all duration-200">
+            See How It Works ↓
+          </a>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-center gap-4 text-xs sm:text-sm font-medium text-gray-300">
+          <span class="flex items-center gap-1.5 glass px-4 py-2 rounded-full"><i class="fa-solid fa-circle-check text-green-400"></i> Zero Commission</span>
+          <span class="flex items-center gap-1.5 glass px-4 py-2 rounded-full"><i class="fa-solid fa-circle-check text-green-400"></i> Lifetime Access</span>
+          <span class="flex items-center gap-1.5 glass px-4 py-2 rounded-full"><i class="fa-solid fa-circle-check text-green-400"></i> Any Printer Compatible</span>
+        </div>
+
+        <div class="mt-16 animate-bounce text-gray-400">
+          <a href="#how-it-works"><i class="fa-solid fa-arrow-down text-lg"></i></a>
+        </div>
       </div>
     </section>
 
-    <!-- ULTIMATE PDF TOOLKIT HIGHLIGHTS -->
-    <h2 class="section-title">📄 Ultimate PDF Toolkit Included</h2>
-    <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem; margin-top: -1.5rem;">Modern document tools to manage files seamlessly before printing</p>
-    
-    <div class="grid">
-      <div class="card tool-card" onclick="window.open('https://www.swagchup.in/', '_blank')" style="cursor: pointer;">
-        <div class="tool-icon">🧩</div>
-        <h3 class="card-title">PDF Merge & Combine ↗</h3>
-        <p>Combine multiple documents or chapters into a unified PDF file for seamless printing.</p>
-      </div>
-      <div class="card tool-card" onclick="window.open('https://www.swagchup.in/', '_blank')" style="cursor: pointer;">
-        <div class="tool-icon">✂️</div>
-        <h3 class="card-title">Smart Page Split ↗</h3>
-        <p>Extract and print specific page ranges from large documents effortlessly.</p>
-      </div>
-      <div class="card tool-card" onclick="window.open('https://www.swagchup.in/', '_blank')" style="cursor: pointer;">
-        <div class="tool-icon">🗜️</div>
-        <h3 class="card-title">Instant PDF Compression ↗</h3>
-        <p>Compress file sizes while preserving original document clarity for fast uploading.</p>
-      </div>
-      <div class="card tool-card" onclick="window.open('https://www.swagchup.in/', '_blank')" style="cursor: pointer;">
-        <div class="tool-icon">🖼️</div>
-        <h3 class="card-title">Image to PDF Converter ↗</h3>
-        <p>Convert JPG or PNG photos instantly into high-quality printable PDF files.</p>
-      </div>
-      <div class="card tool-card">
-        <div class="tool-icon">🔒</div>
-        <h3 class="card-title">100% Privacy & Auto-Delete</h3>
-        <p>All private customer files are automatically purged from servers within 24 hours.</p>
-      </div>
-      <div class="card tool-card">
-        <div class="tool-icon">🎨</div>
-        <h3 class="card-title">Color vs B&W Auto-Detect</h3>
-        <p>Automated detection and calculation of Black & White vs Color page printing rates.</p>
-      </div>
-    </div>
+    <!-- SECTION 2: HOW IT WORKS -->
+    <section id="how-it-works" class="py-20 bg-white relative">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center max-w-3xl mx-auto mb-16 reveal">
+          <span class="text-xs font-bold uppercase tracking-widest text-violet-600 bg-violet-100 px-3.5 py-1.5 rounded-full">Simple Process</span>
+          <h2 class="text-3xl sm:text-4xl font-extrabold text-gray-900 mt-4">Sirf 4 Steps Mein Print!</h2>
+          <p class="text-gray-600 mt-2 text-base">Zero hassle for customers and shop owners alike.</p>
+        </div>
 
-    <h2 class="section-title">How It Works 🛠️</h2>
-    <div class="grid">
-      <div class="card" style="text-align: center;">
-        <div style="font-size: 3rem; margin-bottom: 10px;">1️⃣</div>
-        <h3 class="card-title">Scan QR Code</h3>
-        <p>Customers scan your shop's unique QR code using any Smartphone camera.</p>
-      </div>
-      <div class="card" style="text-align: center;">
-        <div style="font-size: 3rem; margin-bottom: 10px;">2️⃣</div>
-        <h3 class="card-title">Upload File</h3>
-        <p>Upload PDFs, Images, or Documents and configure page print options.</p>
-      </div>
-      <div class="card" style="text-align: center;">
-        <div style="font-size: 3rem; margin-bottom: 10px;">3️⃣</div>
-        <h3 class="card-title">Make Payment</h3>
-        <p>Pay instantly online via UPI / QR or choose Cash payment at the counter.</p>
-      </div>
-      <div class="card" style="text-align: center;">
-        <div style="font-size: 3rem; margin-bottom: 10px;">4️⃣</div>
-        <h3 class="card-title">Automatic Print</h3>
-        <p>The document prints automatically on your shop's printer without any wires!</p>
-      </div>
-    </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
+          <!-- Step 1 -->
+          <div class="bg-gray-50 rounded-2xl p-8 border border-gray-100 hover-lift reveal-left relative">
+            <div class="text-5xl font-extrabold text-violet-200 mb-4">01</div>
+            <div class="w-12 h-12 bg-violet-600 rounded-xl flex items-center justify-center text-white text-xl mb-4 shadow-md">
+              <i class="fa-solid fa-qrcode"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">QR Scan Karo</h3>
+            <p class="text-sm text-gray-600 leading-relaxed">Customer shop ke bahar lage QR Code ko apne smartphone se scan karte hain.</p>
+          </div>
 
-    <h2 class="section-title">Why Choose QRPrint? ⭐</h2>
-    <div class="grid">
-      <div class="card">
-        <h3 class="card-title">📶 100% Wireless</h3>
-        <p>Zero wires, USB drives, or Bluetooth pairing needed. Fully cloud automated.</p>
-      </div>
-      <div class="card">
-        <h3 class="card-title">💸 Instant Earnings</h3>
-        <p>Receive direct customer payments instantly to your linked UPI bank account.</p>
-      </div>
-      <div class="card">
-        <h3 class="card-title">📊 Smart Dashboard</h3>
-        <p>Track real-time prints, today's total earnings, and recent orders dynamically.</p>
-      </div>
-      <div class="card">
-        <h3 class="card-title">🖨️ Any Printer Support</h3>
-        <p>Compatible with any Windows-connected USB, Wireless, or Thermal printer.</p>
-      </div>
-      <div class="card">
-        <h3 class="card-title">⚡ High Speed</h3>
-        <p>Documents reach your printer queue within seconds over cloud connections.</p>
-      </div>
-      <div class="card">
-        <h3 class="card-title">🛡️ Safe & Secure</h3>
-        <p>Bank-grade encryption with automated 24-hour file cleanup protocols.</p>
-      </div>
-    </div>
+          <!-- Step 2 -->
+          <div class="bg-gray-50 rounded-2xl p-8 border border-gray-100 hover-lift reveal-right relative">
+            <div class="text-5xl font-extrabold text-violet-200 mb-4">02</div>
+            <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-xl mb-4 shadow-md">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">File Upload Karo</h3>
+            <p class="text-sm text-gray-600 leading-relaxed">PDF, JPG, PNG ya Word document select karke pages aur color options choose karein.</p>
+          </div>
 
-    <section class="card" style="text-align: center; background: linear-gradient(135deg, #004E64 0%, #2575FC 100%); color: white; margin-top: 3rem; padding: 3.5rem 1.5rem;">
-      <h2 style="font-size: 2.2rem; margin-bottom: 1rem;">Digitize Your Print Shop Today!</h2>
-      <p style="margin-bottom: 1.8rem; opacity: 0.95;">Limited 7-Day Promotion: 99% OFF! Register now at just ₹1 for lifetime access.</p>
-      <a href="/dashboard" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.85rem 2.2rem;">Setup Shop Now (@ ₹1)</a>
+          <!-- Step 3 -->
+          <div class="bg-gray-50 rounded-2xl p-8 border border-gray-100 hover-lift reveal-left relative">
+            <div class="text-5xl font-extrabold text-violet-200 mb-4">03</div>
+            <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white text-xl mb-4 shadow-md">
+              <i class="fa-solid fa-indian-rupee-sign"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">Payment Karo</h3>
+            <p class="text-sm text-gray-600 leading-relaxed">UPI (GPay, PhonePe, Paytm) se online pay karein ya shop counter par cash select karein.</p>
+          </div>
+
+          <!-- Step 4 -->
+          <div class="bg-gray-50 rounded-2xl p-8 border border-gray-100 hover-lift reveal-right relative">
+            <div class="text-5xl font-extrabold text-violet-200 mb-4">04</div>
+            <div class="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center text-white text-xl mb-4 shadow-md">
+              <i class="fa-solid fa-print"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">Print Lo!</h3>
+            <p class="text-sm text-gray-600 leading-relaxed">Document shop ke computer aur printer par bina kisi taar ke automatically print ho jata hai.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: PRICING -->
+    <section id="pricing" class="py-20 bg-violet-50 relative">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center max-w-3xl mx-auto mb-16 reveal">
+          <span class="text-xs font-bold uppercase tracking-widest text-violet-600 bg-white px-3.5 py-1.5 rounded-full shadow-sm">Transparent Pricing</span>
+          <h2 class="text-3xl sm:text-4xl font-extrabold text-gray-900 mt-4">One-Time Payment, Lifetime Benefit!</h2>
+          <p class="text-gray-600 mt-2 text-base">Koi monthly subscription nahi, koi hidden charge nahi.</p>
+        </div>
+
+        <div class="max-w-md mx-auto reveal">
+          <div class="gradient-border bg-white p-8 sm:p-10 shadow-xl hover-lift text-center relative overflow-hidden">
+            <div class="inline-block bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider mb-6">
+              LIFETIME SHOP LICENSE
+            </div>
+
+            <div class="flex items-center justify-center gap-3 mb-4">
+              <span class="text-2xl font-bold text-gray-400 line-through">₹999</span>
+              <span class="bg-red-100 text-red-600 text-xs font-bold px-2.5 py-1 rounded-md">50% OFF</span>
+            </div>
+
+            <div class="text-6xl font-extrabold text-gray-900 mb-2">
+              ₹499<span class="text-sm font-medium text-gray-500">/one-time</span>
+            </div>
+
+            <p class="text-sm text-gray-500 mb-8">Sirf ek baar pay karein — lifetime use karein</p>
+
+            <ul class="space-y-4 text-left text-sm text-gray-700 mb-8 border-t border-b border-gray-100 py-6">
+              <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check text-violet-600 text-base"></i> Apni shop ka unique QR Code</li>
+              <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check text-violet-600 text-base"></i> Print Agent software (lifetime updates)</li>
+              <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check text-violet-600 text-base"></i> Unlimited print orders</li>
+              <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check text-violet-600 text-base"></i> Online + Counter payment support</li>
+              <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check text-violet-600 text-base"></i> Apna Razorpay/PhonePe account use karo</li>
+              <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check text-violet-600 text-base"></i> Koi commission ya platform fees nahi</li>
+            </ul>
+
+            <a href="/dashboard" class="block w-full py-4 text-base font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 rounded-xl shadow-lg hover:shadow-violet-300 transition-all duration-300 animate-pulse-ring">
+              Abhi Shuru Karo →
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: FEATURES -->
+    <section id="features" class="py-20 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center max-w-3xl mx-auto mb-16 reveal">
+          <span class="text-xs font-bold uppercase tracking-widest text-violet-600 bg-violet-100 px-3.5 py-1.5 rounded-full">Powerful Features</span>
+          <h2 class="text-3xl sm:text-4xl font-extrabold text-gray-900 mt-4">Kyun Chune PrintEase?</h2>
+          <p class="text-gray-600 mt-2 text-base">Designed specifically for Indian xerox and print shop owners.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <!-- Feature 1 -->
+          <div class="bg-gray-50 rounded-2xl p-8 border border-gray-100 hover-lift reveal">
+            <div class="w-12 h-12 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center text-xl mb-5">
+              <i class="fa-solid fa-wifi"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">100% Wireless</h3>
+            <p class="text-sm text-gray-600 leading-relaxed">Bina kisi USB drive ya cable connection ke documents direct aapke printer tak pahunchte hain.</p>
+          </div>
+
+          <!-- Feature 2 -->
+          <div class="bg-gray-50 rounded-2xl p-8 border border-gray-100 hover-lift reveal">
+            <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-xl mb-5">
+              <i class="fa-solid fa-crop-simple"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">Auto Page Detect</h3>
+            <p class="text-sm text-gray-600 leading-relaxed">Automated PDF page calculation aur clear print options for customer convenience.</p>
+          </div>
+
+          <!-- Feature 3 -->
+          <div class="bg-gray-50 rounded-2xl p-8 border border-gray-100 hover-lift reveal">
+            <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center text-xl mb-5">
+              <i class="fa-solid fa-vault"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">Apna Paisa, Apna Account</h3>
+            <p class="text-sm text-gray-600 leading-relaxed">Customer ka payment seedhe aapke khud ke linked Razorpay / UPI bank account mein jata hai.</p>
+          </div>
+
+          <!-- Feature 4 -->
+          <div class="bg-gray-50 rounded-2xl p-8 border border-gray-100 hover-lift reveal">
+            <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-xl mb-5">
+              <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">Live Dashboard</h3>
+            <p class="text-sm text-gray-600 leading-relaxed">Aaj ke kitne prints hue, kitni kamai hui — sabhi real-time stats dekhein shop owner dashboard par.</p>
+          </div>
+
+          <!-- Feature 5 -->
+          <div class="bg-gray-50 rounded-2xl p-8 border border-gray-100 hover-lift reveal">
+            <div class="w-12 h-12 bg-red-100 text-red-600 rounded-xl flex items-center justify-center text-xl mb-5">
+              <i class="fa-solid fa-print"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">Koi Bhi Printer Support</h3>
+            <p class="text-sm text-gray-600 leading-relaxed">HP, Epson, Canon, Brother — Windows PC se jude kisi bhi printer ke saath fully compatible.</p>
+          </div>
+
+          <!-- Feature 6 -->
+          <div class="bg-gray-50 rounded-2xl p-8 border border-gray-100 hover-lift reveal">
+            <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center text-xl mb-5">
+              <i class="fa-solid fa-bolt"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">Instant Printing</h3>
+            <p class="text-sm text-gray-600 leading-relaxed">High speed cloud Queue system. Customer pay karta hai aur seconds mein printing shuru!</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: FINAL CTA -->
+    <section class="py-20 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-center relative overflow-hidden">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 reveal">
+        <h2 class="text-3xl sm:text-5xl font-extrabold mb-6 leading-tight">Apni Print Shop ko Aaj Hi Digitize Karein!</h2>
+        <p class="text-lg text-violet-100 max-w-2xl mx-auto mb-10">Join hundreds of smart print shops across India. Setup takes less than 2 minutes.</p>
+        <a href="/dashboard" class="inline-block text-base font-bold text-violet-700 bg-white hover:bg-violet-50 px-10 py-4 rounded-full shadow-2xl hover:shadow-white/20 transition-all duration-300 hover:-translate-y-1 active:scale-95">
+          🚀 Shop Setup Karo
+        </a>
+      </div>
     </section>
   </main>
 
-  <!-- Firebase Auth Modal -->
-  <div class="modal-overlay" id="auth-modal">
-    <div class="modal-card">
-      <button class="modal-close" onclick="closeAuthModal()">&times;</button>
-      <h2 id="modal-title" style="text-align: center; color: var(--text-main); margin-bottom: 1.5rem;">Firebase Login</h2>
-      <div id="auth-error" style="color: var(--danger); display: none; margin-bottom: 1rem; text-align: center; font-size: 0.9rem;"></div>
-      <div class="form-group">
-        <label>Email Address</label>
-        <input type="email" id="auth-email" class="form-control" placeholder="name@example.com">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="auth-password" class="form-control" placeholder="Password">
-      </div>
-      <button class="btn btn-primary" id="modal-submit-btn" style="width: 100%; margin-top: 0.5rem;" onclick="handleAuthSubmit()">Login</button>
-      <div style="text-align: center; margin: 1rem 0; color: var(--text-muted); font-size: 0.85rem;">OR</div>
-      <button class="btn btn-google" onclick="handleGoogleAuth()">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" alt="Google"> Continue with Google
-      </button>
-      <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
-        <span id="modal-switch-text">Don't have an account?</span>
-        <a href="#" id="modal-switch-link" style="color: var(--primary); font-weight: 700; text-decoration: none;" onclick="switchAuthMode()">Sign Up</a>
-      </div>
-    </div>
-  </div>
+  <!-- FOOTER PLACEHOLDER -->
+  <div id="footer-placeholder"></div>
 
-  <!-- Company Policy Info Modal -->
-  <div class="modal-overlay" id="company-modal">
-    <div class="modal-card modal-card-large">
-      <button class="modal-close" onclick="closeCompanyModal()">&times;</button>
-      <h2 id="company-modal-title" style="color: var(--text-main); margin-bottom: 1rem;">...</h2>
-      <div id="company-modal-body" style="line-height: 1.7; color: var(--text-main);">...</div>
-    </div>
-  </div>
-
-  <!-- MULTI-COLUMN SWAGCHUP STYLE SITE FOOTER -->
-  <footer class="site-footer">
-    <div class="footer-container">
-      <div class="footer-brand">
-        <a href="/" class="footer-logo"><img src="/logo.jpg" alt="QRPrint" class="brand-logo-img"> QRPrint</a>
-        <div class="footer-tagline">Wireless Cloud Printing & PDF Toolkit</div>
-        <p>India's premier wireless cloud printing system. Smart document printing, simplified for every print shop & customer.</p>
-        
-        <div class="social-links">
-          <a href="#" class="social-icon" title="Twitter"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg></a>
-          <a href="#" class="social-icon" title="Facebook"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></a>
-          <a href="#" class="social-icon" title="Instagram"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>
-          <a href="#" class="social-icon" title="YouTube"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg></a>
-          <a href="#" class="social-icon" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a>
-          <a href="#" class="social-icon" title="LinkedIn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg></a>
-        </div>
-
-        <div class="razorpay-badge">
-          🛡️ SECURED BY RAZORPAY
-        </div>
-      </div>
-
-      <div class="footer-column">
-        <h4>Partner</h4>
-        <ul>
-          <li><a href="https://www.swagchup.in/" target="_blank">Merge PDFs ↗</a></li>
-          <li><a href="https://www.swagchup.in/" target="_blank">Split PDFs ↗</a></li>
-          <li><a href="https://www.swagchup.in/" target="_blank">Convert PDF ↗</a></li>
-          <li><a href="https://www.swagchup.in/" target="_blank">Secure PDF ↗</a></li>
-          <li><a href="#">Wireless Cloud Print</a></li>
-        </ul>
-      </div>
-
-      <div class="footer-column">
-        <h4>Company</h4>
-        <ul>
-          <li><a href="#" onclick="openCompanyModal('about')">About Us</a></li>
-          <li><a href="/dashboard">Pricing</a></li>
-          <li><a href="#" onclick="openCompanyModal('privacy')">Privacy Policy</a></li>
-          <li><a href="#" onclick="openCompanyModal('terms')">Terms of Service</a></li>
-          <li><a href="#" onclick="openCompanyModal('refund')">Refund Policy</a></li>
-        </ul>
-      </div>
-
-      <div class="footer-column">
-        <h4>Get in Touch</h4>
-        <ul>
-          <li><a href="mailto:support@qrprint.in">✉️ Support Ticket</a></li>
-          <li><a href="https://wa.me/919876543210" target="_blank">📞 WhatsApp Support</a></li>
-          <li style="margin-top: 1rem;"><a href="#" onclick="openAuthModal('login')">🔐 Firebase Console Login</a></li>
-          <li><a href="#" onclick="openAuthModal('signup')">✨ Create Free Account</a></li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="footer-bottom">
-      <div>&copy; 2026 QRPrint. Built with pride from India 🇮🇳</div>
-      <div>Crafted with ❤️ by the QRPrint Team</div>
-    </div>
-  </footer>
-
-  <!-- FLOATING LAUNCH OFFER BAR -->
-  <div class="floating-offer-bar">
-    <div class="offer-bolt">⚡</div>
-    <div class="offer-text">
-      <div><strong>7 DAYS LAUNCH OFFER</strong> <span class="offer-badge-discount">99% OFF</span></div>
-      <div class="offer-subtext">Special Access for <strong style="color: #FFD166;">₹1 Only</strong></div>
-    </div>
-    <div class="offer-timer" id="countdown-timer">6d 23h 59m</div>
-    <a href="/dashboard" class="btn-claim">Claim ₹1 ↗</a>
-  </div>
-
+  <!-- SCRIPT INJECTIONS -->
   <script>
-    let currentMode = 'login';
+    // INJECT HEADER
+    document.getElementById('header-placeholder').innerHTML = `
+      <header class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" id="main-header">
+        <nav class="bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+              <a href="/" class="flex items-center gap-2 group">
+                <div class="w-9 h-9 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-violet-300 transition-shadow duration-300">
+                  <i class="fa-solid fa-print text-white text-sm"></i>
+                </div>
+                <span class="font-bold text-xl text-gray-800 tracking-tight">Print<span class="text-violet-600">Ease</span></span>
+              </a>
+              <div class="hidden md:flex items-center gap-8">
+                <a href="/" class="text-sm font-medium text-violet-600">Home</a>
+                <a href="#how-it-works" class="text-sm font-medium text-gray-600 hover:text-violet-600 transition-colors">How It Works</a>
+                <a href="#features" class="text-sm font-medium text-gray-600 hover:text-violet-600 transition-colors">Features</a>
+                <a href="#pricing" class="text-sm font-medium text-gray-600 hover:text-violet-600 transition-colors">Pricing</a>
+              </div>
+              <div class="hidden md:flex items-center gap-3">
+                <a href="/admin" class="text-sm font-medium text-gray-600 hover:text-violet-600 px-4 py-2 rounded-lg hover:bg-violet-50 transition-all">
+                  <i class="fa-solid fa-right-to-bracket mr-1.5"></i>Shop Login
+                </a>
+                <a href="/dashboard" class="text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 px-5 py-2.5 rounded-full shadow-md transition-all">
+                  <i class="fa-solid fa-store mr-1.5"></i>Setup Your Shop
+                </a>
+              </div>
+              <button class="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100" onclick="toggleMobileMenu()">
+                <i class="fa-solid fa-bars text-lg" id="hamburger-icon"></i>
+              </button>
+            </div>
+          </div>
+          <div id="mobile-menu" class="md:hidden hidden border-t border-gray-100 bg-white/98">
+            <div class="px-4 py-4 flex flex-col gap-3">
+              <a href="/" class="text-sm font-medium text-gray-700 py-2">Home</a>
+              <a href="#how-it-works" class="text-sm font-medium text-gray-700 py-2">How It Works</a>
+              <a href="#features" class="text-sm font-medium text-gray-700 py-2">Features</a>
+              <a href="#pricing" class="text-sm font-medium text-gray-700 py-2">Pricing</a>
+              <hr class="border-gray-100">
+              <a href="/admin" class="text-sm font-medium text-gray-600 py-2"><i class="fa-solid fa-right-to-bracket mr-2"></i>Shop Owner Login</a>
+              <a href="/dashboard" class="text-sm font-semibold text-white text-center bg-gradient-to-r from-violet-600 to-indigo-600 py-3 rounded-xl"><i class="fa-solid fa-store mr-2"></i>Setup Your Shop</a>
+            </div>
+          </div>
+        </nav>
+      </header>
+      <div class="h-16"></div>
+    `;
 
-    function initTheme() {
-      const savedTheme = localStorage.getItem('qr_theme') || 'light';
-      document.documentElement.setAttribute('data-theme', savedTheme);
-      document.getElementById('theme-btn').innerText = savedTheme === 'dark' ? '☀️' : '🌙';
-    }
-    function toggleTheme() {
-      const current = document.documentElement.getAttribute('data-theme');
-      const next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('qr_theme', next);
-      document.getElementById('theme-btn').innerText = next === 'dark' ? '☀️' : '🌙';
-    }
-    initTheme();
+    // INJECT FOOTER
+    document.getElementById('footer-placeholder').innerHTML = `
+      <footer class="bg-gray-900 text-gray-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+            <div>
+              <a href="/" class="flex items-center gap-2 mb-4">
+                <div class="w-9 h-9 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                  <i class="fa-solid fa-print text-white text-sm"></i>
+                </div>
+                <span class="font-bold text-xl text-white">Print<span class="text-violet-400">Ease</span></span>
+              </a>
+              <p class="text-sm text-gray-400 leading-relaxed mb-5">India's smartest wireless print system. QR scan karo, seconds mein print lo.</p>
+            </div>
+            <div>
+              <h4 class="text-white font-semibold text-sm uppercase tracking-wider mb-4">Product</h4>
+              <ul class="space-y-2.5 text-sm">
+                <li><a href="#how-it-works" class="text-gray-400 hover:text-violet-400">How It Works</a></li>
+                <li><a href="#features" class="text-gray-400 hover:text-violet-400">Features</a></li>
+                <li><a href="#pricing" class="text-gray-400 hover:text-violet-400">Pricing</a></li>
+                <li><a href="/dashboard" class="text-gray-400 hover:text-violet-400">Setup Your Shop</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="text-white font-semibold text-sm uppercase tracking-wider mb-4">Shop Owners</h4>
+              <ul class="space-y-2.5 text-sm">
+                <li><a href="/admin" class="text-gray-400 hover:text-violet-400">Owner Login</a></li>
+                <li><a href="/admin" class="text-gray-400 hover:text-violet-400">Download Print Agent</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="text-white font-semibold text-sm uppercase tracking-wider mb-4">Support</h4>
+              <ul class="space-y-2.5 text-sm">
+                <li><a href="mailto:support@printease.in" class="text-gray-400 hover:text-violet-400"><i class="fa-solid fa-envelope mr-1.5"></i>Email Support</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="border-t border-gray-800 py-5 text-center text-xs text-gray-500">
+          © 2026 PrintEase. All rights reserved.
+        </div>
+      </footer>
+    `;
 
-    fetch('/api/pricing')
-      .then(res => res.json())
-      .then(data => {
-        const el = document.getElementById('offer-price');
-        if (el) el.innerText = '₹' + data.offer_price;
-      })
-      .catch(err => console.error(err));
-
-    let secondsLeft = 7 * 24 * 60 * 60 - 42;
-    setInterval(() => {
-      if (secondsLeft > 0) secondsLeft--;
-      const d = Math.floor(secondsLeft / (24 * 3600));
-      const h = Math.floor((secondsLeft % (24 * 3600)) / 3600);
-      const m = Math.floor((secondsLeft % 3600) / 60);
-      const s = secondsLeft % 60;
-      document.getElementById('countdown-timer').innerText = `${d}d ${h}h ${m}m ${s}s`;
-    }, 1000);
-
-    const companyContent = {
-      about: {
-        title: "About Us 🏢",
-        html: `<p><strong>QRPrint</strong> is India's leading wireless cloud printing infrastructure designed specifically for print shop owners (xerox shops, cyber cafes, and stationery stores) and their customers.</p>
-               <br><p>Our mission is to eliminate USB drives, Bluetooth pairing delays, and wire connections by offering a 100% cloud-automated printing ecosystem. Shop owners display a unique QR code outside their premises; customers scan, upload documents securely, pay online or at the counter, and documents automatically print directly on the shop's printer in seconds.</p>`
-      },
-      privacy: {
-        title: "Privacy Policy 🛡️",
-        html: `<p>At <strong>QRPrint</strong>, we prioritize the utmost security and confidentiality of your documents.</p>
-               <br><h4>1. Document Confidentiality</h4>
-               <p>Uploaded documents (PDFs, images, Word docs) are strictly used for instant printing tasks. All uploaded files are automatically and permanently purged from our storage servers within 24 hours.</p>
-               <br><h4>2. Data Protection</h4>
-               <p>We do not share, sell, or analyze your personal document contents. Payments are processed through bank-grade secured payment gateways (Razorpay / PhonePe).</p>`
-      },
-      terms: {
-        title: "Terms of Service 📜",
-        html: `<p>By accessing or registering with <strong>QRPrint</strong>, you agree to the following terms:</p>
-               <br><h4>1. Usage Terms</h4>
-               <p>Print shop owners must maintain active print agent software on their connected Windows PCs to process incoming print queues.</p>
-               <br><h4>2. Prohibited Content</h4>
-               <p>Users must not upload illegal, fraudulent, or unauthorized copyrighted material for printing.</p>`
-      },
-      refund: {
-        title: "Refund Policy 💸",
-        html: `<p>We strive to ensure complete customer and shop owner satisfaction.</p>
-               <br><h4>1. Setup Fee Refunds</h4>
-               <p>Shop owners are eligible for a full refund of their initial setup fee within 7 days of registration if technical integration assistance is unsuccessful.</p>
-               <br><h4>2. Print Job Adjustments</h4>
-               <p>If a print job fails due to printer hardware offline status or paper jam, payment is held in queue until resolved or marked for cash counter reconciliation.</p>`
-      }
-    };
-
-    function openCompanyModal(type) {
-      const data = companyContent[type];
-      if (data) {
-        document.getElementById('company-modal-title').innerHTML = data.title;
-        document.getElementById('company-modal-body').innerHTML = data.html;
-        document.getElementById('company-modal').classList.add('active');
-      }
-    }
-    function closeCompanyModal() {
-      document.getElementById('company-modal').classList.remove('active');
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobile-menu');
+      const icon = document.getElementById('hamburger-icon');
+      menu.classList.toggle('hidden');
+      icon.classList.toggle('fa-bars');
+      icon.classList.toggle('fa-xmark');
     }
 
-    function openAuthModal(mode) {
-      currentMode = mode;
-      updateModalUI();
-      document.getElementById('auth-modal').classList.add('active');
-    }
-    function closeAuthModal() {
-      document.getElementById('auth-modal').classList.remove('active');
-      document.getElementById('auth-error').style.display = 'none';
-    }
-    function switchAuthMode() {
-      currentMode = currentMode === 'login' ? 'signup' : 'login';
-      updateModalUI();
-    }
-    function updateModalUI() {
-      const title = document.getElementById('modal-title');
-      const submitBtn = document.getElementById('modal-submit-btn');
-      const switchText = document.getElementById('modal-switch-text');
-      const switchLink = document.getElementById('modal-switch-link');
-      if (currentMode === 'login') {
-        title.innerText = 'Firebase Console Login 🔥';
-        submitBtn.innerText = 'Login';
-        switchText.innerText = "Don't have an account?";
-        switchLink.innerText = 'Sign Up';
-      } else {
-        title.innerText = 'Firebase Sign Up 🔥';
-        submitBtn.innerText = 'Create Account';
-        switchText.innerText = 'Already have an account?';
-        switchLink.innerText = 'Login';
-      }
-    }
-    async function handleAuthSubmit() {
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-password').value.trim();
-      const errEl = document.getElementById('auth-error');
-      errEl.style.display = 'none';
-      if (!email || !password) {
-        errEl.innerText = 'Please enter both email and password';
-        errEl.style.display = 'block';
-        return;
-      }
-      let res = currentMode === 'login' 
-        ? await window.FirebaseAuthHelper.loginWithEmail(email, password)
-        : await window.FirebaseAuthHelper.signUpWithEmail(email, password);
-      if (res.success) {
-        alert('🎉 Firebase Auth Success! Welcome ' + res.user.email);
-        closeAuthModal();
-      } else {
-        errEl.innerText = res.error;
-        errEl.style.display = 'block';
-      }
-    }
-    async function handleGoogleAuth() {
-      const res = await window.FirebaseAuthHelper.signInWithGoogle();
-      if (res.success) {
-        alert('🎉 Google Login Success! Welcome ' + res.user.displayName);
-        closeAuthModal();
-      } else {
-        const errEl = document.getElementById('auth-error');
-        errEl.innerText = res.error;
-        errEl.style.display = 'block';
-      }
-    }
-    window.FirebaseAuthHelper.onAuthStateChanged(user => {
-      const container = document.getElementById('nav-auth-container');
-      const themeBtnHTML = `<button class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle Dark/Light Theme">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙'}</button>`;
-      if (user) {
-        container.innerHTML = `
-          ${themeBtnHTML}
-          <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">👋 ${user.displayName || user.email.split('@')[0]}</span>
-          <button onclick="window.FirebaseAuthHelper.logout()" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Logout</button>
-        `;
-      } else {
-        container.innerHTML = `
-          ${themeBtnHTML}
-          <a href="#" onclick="openAuthModal('login')" class="btn btn-outline">Login</a>
-          <a href="#" onclick="openAuthModal('signup')" class="btn btn-primary">Sign Up</a>
-        `;
-      }
-    });
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => observer.observe(el));
   </script>
 </body>
 </html>

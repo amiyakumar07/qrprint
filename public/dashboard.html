@@ -1,482 +1,258 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Shop Registration - QRPrint</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="stylesheet" href="/style.css">
+  <title>Setup Your Shop — PrintEase</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-  <script src="/firebase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            violet: {
+              50:  '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd',
+              400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .gradient-border { position: relative; background: linear-gradient(white,white) padding-box, linear-gradient(135deg,#7c3aed,#4f46e5) border-box; border: 2px solid transparent; border-radius: 16px; }
+  </style>
 </head>
-<body>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen">
 
-  <header>
-    <div class="nav-container">
-      <!-- LEFT SIDE: LOGO ONLY -->
-      <div class="nav-left">
-        <a href="/" class="logo"><img src="/logo.jpg" alt="QRPrint" class="brand-logo-img"> QRPrint</a>
+  <div id="header-placeholder"></div>
+
+  <main class="max-w-2xl mx-auto px-4 py-10">
+    <!-- REGISTRATION CARD -->
+    <div id="registration-card" class="bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-gray-100">
+      <div class="text-center mb-8">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900">Register New Shop 🏪</h1>
+        <p class="text-sm text-gray-500 mt-1">Fill in your shop details below to get your unique QR code</p>
       </div>
 
-      <!-- MIDDLE SIDE: PRICING & ABOUT US -->
-      <div class="nav-center">
-        <a href="/dashboard">Pricing</a>
-        <a href="/" onclick="openCompanyModal('about')">About Us</a>
+      <div id="error-alert" class="hidden mb-6 p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-medium flex items-center gap-2">
+        <i class="fa-solid fa-circle-xmark"></i> <span id="error-text"></span>
       </div>
 
-      <!-- RIGHT SIDE: THEME TOGGLE + LOGIN + SIGN UP -->
-      <div class="nav-right" id="nav-auth-container">
-        <button class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle Dark/Light Theme">🌙</button>
-        <a href="/admin" class="btn btn-outline">Already Registered? Login</a>
-      </div>
+      <form id="reg-form" onsubmit="handleFormSubmit(event)" class="space-y-6">
+        <!-- Section 1: Basic Info -->
+        <div class="space-y-4">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-violet-600 border-b border-gray-100 pb-2">1. Shop Info</h3>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Shop Name *</label>
+            <input type="text" id="shopName" placeholder="e.g. Sharma Digital Print Shop" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Login Email *</label>
+            <input type="email" id="email" placeholder="e.g. sharma.print@gmail.com" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none text-sm">
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Printer Model</label>
+              <select id="printerModel" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none text-sm bg-white">
+                <option>Auto Detect (Recommended)</option>
+                <option>Epson L3110 / L3250</option>
+                <option>HP LaserJet Pro M126nw</option>
+                <option>Canon G2010 / Pixma</option>
+                <option>Brother DCP-T220</option>
+                <option>Other / Generic Printer</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Phone Number *</label>
+              <input type="tel" id="phone" placeholder="9876543210" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none text-sm">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Pricing -->
+        <div class="space-y-4">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-violet-600 border-b border-gray-100 pb-2">2. Your Customer Print Rates</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">B&W Rate (₹/pg)</label>
+              <input type="number" id="bwPrice" value="2" step="0.5" min="0" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none text-sm font-bold">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Color Rate (₹/pg)</label>
+              <input type="number" id="colorPrice" value="8" step="0.5" min="0" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none text-sm font-bold text-violet-600">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Gateway Keys -->
+        <div class="space-y-4">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-violet-600 border-b border-gray-100 pb-2">3. Your Payment Gateway (Optional)</h3>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Razorpay Key ID (Optional)</label>
+            <input type="text" id="razorpayKeyId" placeholder="rzp_live_xxxxxxxx" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none text-sm font-mono">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Razorpay Key Secret (Optional)</label>
+            <input type="password" id="razorpayKeySecret" placeholder="Key Secret" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none text-sm font-mono">
+          </div>
+        </div>
+
+        <!-- Section 4: Password -->
+        <div class="space-y-4">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-violet-600 border-b border-gray-100 pb-2">4. Admin Password</h3>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Choose Secret Password *</label>
+            <input type="password" id="password" required placeholder="Choose a password for dashboard login" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none text-sm">
+          </div>
+        </div>
+
+        <!-- Setup Fee Card -->
+        <div class="bg-violet-50 border border-violet-200 rounded-2xl p-5 text-center">
+          <p class="text-xs font-bold uppercase tracking-wider text-violet-700">One-Time Lifetime Setup Fee</p>
+          <div class="flex items-center justify-center gap-2 mt-1">
+            <span class="text-gray-400 line-through text-lg font-semibold">₹999</span>
+            <span class="text-3xl font-extrabold text-violet-700">₹499</span>
+            <span class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded">50% OFF</span>
+          </div>
+        </div>
+
+        <button type="submit" id="btn-submit" class="w-full py-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold rounded-2xl shadow-xl hover:shadow-violet-300 transition-all text-base flex items-center justify-center gap-2">
+          <i class="fa-solid fa-credit-card"></i> Pay Setup Fee & Register
+        </button>
+      </form>
     </div>
-  </header>
 
-  <main class="container" style="max-width: 700px;">
-    <div class="card">
-      <h2 style="text-align: center; margin-bottom: 1.5rem; color: var(--text-main);">Register New Shop 🏪</h2>
-      <div id="error-msg" style="color: var(--danger); display: none; margin-bottom: 1rem; text-align: center; font-weight: 600;"></div>
+    <!-- SUCCESS STATE (hidden by default) -->
+    <div id="success-card" class="hidden bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-gray-100 text-center">
+      <div class="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 animate-bounce">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">Registration Successful! 🎉</h2>
+      <p class="text-sm text-gray-500 mb-6">Aapki shop successfully setup ho gayi hai.</p>
 
-      <!-- Section 1: Basic Info -->
-      <div class="form-group">
-        <label>Shop Name *</label>
-        <input type="text" id="name" class="form-control" placeholder="e.g. Sharma Digital Print Shop" required>
+      <div class="bg-violet-50 border border-violet-200 rounded-2xl p-6 mb-6 inline-block w-full text-left">
+        <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Your Unique Shop ID</p>
+        <p class="text-3xl font-extrabold text-violet-700 font-mono" id="disp-shop-id">PE-1000</p>
+        <p class="text-xs text-violet-600 mt-2"><i class="fa-solid fa-info-circle mr-1"></i>Is ID ya Email se aap Owner Admin Dashboard mein login kar sakte hain.</p>
       </div>
 
-      <div class="form-group">
-        <label>Email Address *</label>
-        <input type="email" id="email" class="form-control" placeholder="e.g. sharma.print@example.com" required>
-      </div>
-
-      <div class="form-group">
-        <label>Printer Model</label>
-        <select id="printer" class="form-control">
-          <option value="Auto Detect">Auto Detect (Windows Default)</option>
-          <option value="HP LaserJet P1102">HP LaserJet P1102</option>
-          <option value="HP LaserJet Pro M126nw">HP LaserJet Pro M126nw</option>
-          <option value="HP Ink Tank 315">HP Ink Tank 315</option>
-          <option value="HP Smart Tank 515">HP Smart Tank 515</option>
-          <option value="Epson EcoTank L3150">Epson EcoTank L3150</option>
-          <option value="Epson EcoTank L3250">Epson EcoTank L3250</option>
-          <option value="Epson L130">Epson L130</option>
-          <option value="Canon Pixma G2010">Canon Pixma G2010</option>
-          <option value="Canon Pixma G3010">Canon Pixma G3010</option>
-          <option value="Canon imageCLASS MF244dw">Canon imageCLASS MF244dw</option>
-          <option value="Brother DCP-L2541DW">Brother DCP-L2541DW</option>
-          <option value="Brother HL-L2321D">Brother HL-L2321D</option>
-          <option value="Brother DCP-T420W">Brother DCP-T420W</option>
-          <option value="Samsung ML-2163">Samsung ML-2163</option>
-          <option value="Ricoh SP 210">Ricoh SP 210</option>
-          <option value="Xerox Phaser 3020">Xerox Phaser 3020</option>
-          <option value="Kyocera ECOSYS FS-1025">Kyocera ECOSYS FS-1025</option>
-          <option value="Pantum P2500W">Pantum P2500W</option>
-          <option value="Konica Minolta bizhub 205i">Konica Minolta bizhub 205i</option>
-          <option value="Other / Generic Printer">Other / Generic Printer</option>
-        </select>
-      </div>
-
-      <!-- Section 2: Contact -->
-      <div class="form-group">
-        <label>Shop Address</label>
-        <input type="text" id="address" class="form-control" placeholder="e.g. Shop 12, Main Market, Delhi">
-      </div>
-
-      <div class="form-group">
-        <label>Mobile Number</label>
-        <input type="tel" id="phone" class="form-control" placeholder="9876543210">
-      </div>
-
-      <!-- Section 3: Pricing -->
-      <div style="display: flex; gap: 1rem;">
-        <div class="form-group" style="flex: 1;">
-          <label>B&W Print Rate (₹ per page)</label>
-          <input type="number" id="bw_price" class="form-control" value="1" step="0.5" min="0">
-        </div>
-        <div class="form-group" style="flex: 1;">
-          <label>Color Print Rate (₹ per page)</label>
-          <input type="number" id="color_price" class="form-control" value="5" step="0.5" min="0">
+      <div class="mb-8 p-4 bg-gray-50 border border-gray-100 rounded-2xl flex flex-col items-center">
+        <p class="text-sm font-bold text-gray-700 mb-3">Shop QR Code (Print and Place Outside)</p>
+        <img id="disp-qr-img" src="" alt="QR Code" class="w-48 h-48 rounded-xl border border-gray-200 p-2 bg-white shadow-sm mb-4">
+        <div class="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+          <a id="download-qr-btn" download="Shop_QR.png" class="flex-1 py-3 px-4 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-md">
+            <i class="fa-solid fa-download"></i> Download QR Code
+          </a>
+          <a href="/admin" class="flex-1 py-3 px-4 bg-gray-800 hover:bg-gray-900 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-md">
+            <i class="fa-solid fa-right-to-bracket"></i> Owner Admin Panel ➔
+          </a>
         </div>
       </div>
-
-      <!-- Section 4: Payment Mode -->
-      <div class="form-group">
-        <label>Customer Payment Options</label>
-        <div class="radio-card-group">
-          <div class="radio-card selected" onclick="selectPaymentMode('both', this)">
-            <strong>Both</strong><br><small>Online + Cash</small>
-          </div>
-          <div class="radio-card" onclick="selectPaymentMode('online', this)">
-            <strong>Online Only</strong><br><small>UPI Payment</small>
-          </div>
-          <div class="radio-card" onclick="selectPaymentMode('counter', this)">
-            <strong>Counter Only</strong><br><small>Cash at Shop</small>
-          </div>
-        </div>
-        <input type="hidden" id="payment_mode" value="both">
-      </div>
-
-      <!-- Section 5: Payment Gateway -->
-      <div class="form-group" id="gateway-section">
-        <label>Payment Gateway Settings</label>
-        <div class="radio-card-group" style="margin-bottom: 1rem;">
-          <div class="radio-card selected" onclick="selectGateway('razorpay', this)">
-            <strong>Razorpay</strong>
-          </div>
-          <div class="radio-card" onclick="selectGateway('phonepe', this)">
-            <strong>PhonePe</strong>
-          </div>
-        </div>
-        <input type="hidden" id="gateway" value="razorpay">
-
-        <div id="razorpay-fields">
-          <div class="form-group">
-            <label>Razorpay Key ID</label>
-            <input type="text" id="razorpay_key_id" class="form-control" placeholder="rzp_live_xxxxxxxx">
-          </div>
-          <div class="form-group">
-            <label>Razorpay Key Secret</label>
-            <input type="password" id="razorpay_key_secret" class="form-control" placeholder="Secret Key">
-          </div>
-          <small style="color: var(--text-muted);">Don't have an account? <a href="https://razorpay.com" target="_blank">Razorpay Sign Up</a></small>
-        </div>
-
-        <div id="phonepe-fields" style="display: none;">
-          <div class="form-group">
-            <label>PhonePe Merchant ID</label>
-            <input type="text" id="phonepe_merchant_id" class="form-control" placeholder="MERCHANTUAT">
-          </div>
-          <div class="form-group">
-            <label>PhonePe Salt Key</label>
-            <input type="password" id="phonepe_salt_key" class="form-control" placeholder="Salt Key">
-          </div>
-          <div class="form-group">
-            <label>PhonePe Salt Index</label>
-            <input type="text" id="phonepe_salt_index" class="form-control" value="1">
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 6: Password -->
-      <div class="form-group">
-        <label>Admin Login Password *</label>
-        <input type="password" id="password" class="form-control" placeholder="Choose your secret password" required>
-      </div>
-
-      <!-- Section 7: Setup Fee Display -->
-      <div style="background: var(--bg-color); padding: 1rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;">
-        <div style="font-size: 0.9rem; color: var(--text-muted);">One-time Setup Fee</div>
-        <div style="font-size: 1.8rem; font-weight: 800; color: var(--primary);">
-          <span id="setup-offer">₹1</span>
-        </div>
-      </div>
-
-      <button id="register-btn" class="btn btn-primary" style="width: 100%; font-size: 1.1rem; padding: 0.8rem;" onclick="handleRegister()">Pay Setup Fee & Register</button>
     </div>
   </main>
 
-  <!-- Registration Success Receipt Modal -->
-  <div class="modal-overlay" id="success-modal">
-    <div class="modal-card modal-card-large" style="max-width: 650px; text-align: left; padding: 2rem;">
-      <div style="text-align: center; margin-bottom: 1.5rem;">
-        <div style="font-size: 3.5rem; line-height: 1;">🎉</div>
-        <h2 style="color: var(--text-main); margin-top: 0.5rem;">Shop Registration Successful!</h2>
-        <p style="color: var(--text-muted); font-size: 0.95rem;">Payment Verified. Save your credentials below for logging in.</p>
-      </div>
-
-      <div id="receipt-print-area" style="background: var(--bg-color); border: 2px solid var(--primary); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
-        <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--header-border); padding-bottom: 0.8rem; margin-bottom: 1rem; align-items: center;">
-          <strong style="font-size: 1.3rem; color: var(--primary);" id="rec-shop-name">...</strong>
-          <span class="badge badge-success" style="font-size: 0.9rem;">Status: ACTIVE</span>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.95rem; line-height: 1.6;">
-          <div><strong>Shop ID:</strong> <br><span id="rec-shop-id" style="color: var(--primary); font-weight: 700; font-family: monospace; font-size: 1.1rem;">-</span></div>
-          <div><strong>Login Email:</strong> <br><span id="rec-email" style="font-weight: 700;">-</span></div>
-          <div><strong>Printer Model:</strong> <br><span id="rec-printer">-</span></div>
-          <div><strong>Mobile:</strong> <br><span id="rec-phone">-</span></div>
-          <div><strong>B&W Rate:</strong> <br><span id="rec-bw">₹1</span>/page</div>
-          <div><strong>Color Rate:</strong> <br><span id="rec-color">₹5</span>/page</div>
-          <div><strong>Payment Gateway:</strong> <br><span id="rec-gateway">Razorpay</span></div>
-          <div><strong>Customer QR Link:</strong> <br><a href="#" id="rec-qr-link" target="_blank" style="color: var(--primary); font-weight: 700;">Open Customer Page ↗</a></div>
-        </div>
-      </div>
-
-      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-        <button class="btn btn-primary" style="flex: 1; font-size: 1rem; padding: 0.8rem;" onclick="window.print()">📥 Print / Save Receipt (PDF)</button>
-        <a href="/admin" class="btn btn-secondary" style="flex: 1; font-size: 1rem; padding: 0.8rem; text-align: center;">Go to Admin Login 🔑</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- Company Policy Info Modal -->
-  <div class="modal-overlay" id="company-modal">
-    <div class="modal-card modal-card-large">
-      <button class="modal-close" onclick="closeCompanyModal()">&times;</button>
-      <h2 id="company-modal-title" style="color: var(--text-main); margin-bottom: 1rem;">...</h2>
-      <div id="company-modal-body" style="line-height: 1.7; color: var(--text-main);">...</div>
-    </div>
-  </div>
-
-  <footer class="site-footer">
-    <div class="footer-container">
-      <div class="footer-brand">
-        <a href="/" class="footer-logo"><img src="/logo.jpg" alt="QRPrint" class="brand-logo-img"> QRPrint</a>
-        <div class="footer-tagline">Wireless Cloud Printing & PDF Toolkit</div>
-        <p>India's premier wireless cloud printing system.</p>
-        
-        <div class="social-links">
-          <a href="#" class="social-icon" title="Twitter"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg></a>
-          <a href="#" class="social-icon" title="Facebook"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></a>
-          <a href="#" class="social-icon" title="Instagram"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>
-          <a href="#" class="social-icon" title="YouTube"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg></a>
-          <a href="#" class="social-icon" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a>
-          <a href="#" class="social-icon" title="LinkedIn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg></a>
-        </div>
-
-        <div class="razorpay-badge">🛡️ SECURED BY RAZORPAY</div>
-      </div>
-      <div class="footer-column">
-        <h4>Partner</h4>
-        <ul>
-          <li><a href="https://www.swagchup.in/" target="_blank">Merge PDFs ↗</a></li>
-          <li><a href="https://www.swagchup.in/" target="_blank">Split PDFs ↗</a></li>
-          <li><a href="https://www.swagchup.in/" target="_blank">Convert PDF ↗</a></li>
-          <li><a href="https://www.swagchup.in/" target="_blank">Secure PDF ↗</a></li>
-        </ul>
-      </div>
-      <div class="footer-column">
-        <h4>Company</h4>
-        <ul>
-          <li><a href="/" onclick="openCompanyModal('about')">About Us</a></li>
-          <li><a href="/dashboard">Pricing</a></li>
-          <li><a href="/" onclick="openCompanyModal('privacy')">Privacy Policy</a></li>
-          <li><a href="/" onclick="openCompanyModal('terms')">Terms of Service</a></li>
-          <li><a href="/" onclick="openCompanyModal('refund')">Refund Policy</a></li>
-        </ul>
-      </div>
-      <div class="footer-column">
-        <h4>Get in Touch</h4>
-        <ul>
-          <li><a href="mailto:support@qrprint.in">✉️ Support Ticket</a></li>
-          <li><a href="https://wa.me/919876543210" target="_blank">📞 WhatsApp Support</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="footer-bottom">
-      <div>&copy; 2026 QRPrint. Built with pride from India 🇮🇳</div>
-    </div>
-  </footer>
+  <div id="footer-placeholder"></div>
 
   <script>
-    function initTheme() {
-      const savedTheme = localStorage.getItem('qr_theme') || 'light';
-      document.documentElement.setAttribute('data-theme', savedTheme);
-      document.getElementById('theme-btn').innerText = savedTheme === 'dark' ? '☀️' : '🌙';
-    }
-    function toggleTheme() {
-      const current = document.documentElement.getAttribute('data-theme');
-      const next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('qr_theme', next);
-      document.getElementById('theme-btn').innerText = next === 'dark' ? '☀️' : '🌙';
-    }
-    initTheme();
+    document.getElementById('header-placeholder').innerHTML = `
+      <header class="bg-white border-b border-gray-100 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+          <a href="/" class="font-bold text-xl text-gray-800">Print<span class="text-violet-600">Ease</span></a>
+          <a href="/admin" class="text-xs font-semibold text-violet-600 hover:text-violet-700"><i class="fa-solid fa-right-to-bracket mr-1"></i>Already registered? Login</a>
+        </div>
+      </header>
+    `;
 
-    fetch('/api/pricing')
-      .then(res => res.json())
-      .then(data => {
-        const el = document.getElementById('setup-offer');
-        if (el) el.innerText = '₹' + data.offer_price;
-      });
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      const errAlert = document.getElementById('error-alert');
+      errAlert.classList.add('hidden');
 
-    const companyContent = {
-      about: {
-        title: "About Us 🏢",
-        html: `<p><strong>QRPrint</strong> is India's leading wireless cloud printing infrastructure designed specifically for print shop owners (xerox shops, cyber cafes, and stationery stores) and their customers.</p>
-               <br><p>Our mission is to eliminate USB drives, Bluetooth pairing delays, and wire connections by offering a 100% cloud-automated printing ecosystem. Shop owners display a unique QR code outside their premises; customers scan, upload documents securely, pay online or at the counter, and documents automatically print directly on the shop's printer in seconds.</p>`
-      },
-      privacy: {
-        title: "Privacy Policy 🛡️",
-        html: `<p>At <strong>QRPrint</strong>, we prioritize the utmost security and confidentiality of your documents.</p>
-               <br><h4>1. Document Confidentiality</h4>
-               <p>Uploaded documents (PDFs, images, Word docs) are strictly used for instant printing tasks. All uploaded files are automatically and permanently purged from our storage servers within 24 hours.</p>
-               <br><h4>2. Data Protection</h4>
-               <p>We do not share, sell, or analyze your personal document contents. Payments are processed through bank-grade secured payment gateways (Razorpay / PhonePe).</p>`
-      },
-      terms: {
-        title: "Terms of Service 📜",
-        html: `<p>By accessing or registering with <strong>QRPrint</strong>, you agree to the following terms:</p>
-               <br><h4>1. Usage Terms</h4>
-               <p>Print shop owners must maintain active print agent software on their connected Windows PCs to process incoming print queues.</p>
-               <br><h4>2. Prohibited Content</h4>
-               <p>Users must not upload illegal, fraudulent, or unauthorized copyrighted material for printing.</p>`
-      },
-      refund: {
-        title: "Refund Policy 💸",
-        html: `<p>We strive to ensure complete customer and shop owner satisfaction.</p>
-               <br><h4>1. Setup Fee Refunds</h4>
-               <p>Shop owners are eligible for a full refund of their initial setup fee within 7 days of registration if technical integration assistance is unsuccessful.</p>
-               <br><h4>2. Print Job Adjustments</h4>
-               <p>If a print job fails due to printer hardware offline status or paper jam, payment is held in queue until resolved or marked for cash counter reconciliation.</p>`
-      }
-    };
-
-    function openCompanyModal(type) {
-      const data = companyContent[type];
-      if (data) {
-        document.getElementById('company-modal-title').innerHTML = data.title;
-        document.getElementById('company-modal-body').innerHTML = data.html;
-        document.getElementById('company-modal').classList.add('active');
-      }
-    }
-    function closeCompanyModal() {
-      document.getElementById('company-modal').classList.remove('active');
-    }
-
-    function selectPaymentMode(mode, el) {
-      document.querySelectorAll('#payment_mode ~ .radio-card-group .radio-card, .radio-card-group:nth-of-type(1) .radio-card').forEach(c => c.classList.remove('selected'));
-      el.classList.add('selected');
-      document.getElementById('payment_mode').value = mode;
-      
-      const gatewaySec = document.getElementById('gateway-section');
-      if (mode === 'counter') {
-        gatewaySec.style.display = 'none';
-      } else {
-        gatewaySec.style.display = 'block';
-      }
-    }
-
-    function selectGateway(gw, el) {
-      document.querySelectorAll('#gateway-fields ~ .radio-card-group .radio-card, #gateway-section .radio-card-group .radio-card').forEach(c => c.classList.remove('selected'));
-      el.classList.add('selected');
-      document.getElementById('gateway').value = gw;
-      if (gw === 'razorpay') {
-        document.getElementById('razorpay-fields').style.display = 'block';
-        document.getElementById('phonepe-fields').style.display = 'none';
-      } else {
-        document.getElementById('razorpay-fields').style.display = 'none';
-        document.getElementById('phonepe-fields').style.display = 'block';
-      }
-    }
-
-    async function handleRegister() {
-      const errorMsg = document.getElementById('error-msg');
-      errorMsg.style.display = 'none';
-
-      const email = document.getElementById('email').value.trim();
-      const name = document.getElementById('name').value.trim();
-      const password = document.getElementById('password').value.trim();
-      if (!name || !email || !password) {
-        errorMsg.innerText = 'Shop name, Email, and password are required!';
-        errorMsg.style.display = 'block';
-        return;
-      }
+      const btn = document.getElementById('btn-submit');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Processing...';
 
       const body = {
-        name,
-        email,
-        printer: document.getElementById('printer').value,
-        address: document.getElementById('address').value,
-        phone: document.getElementById('phone').value,
-        bw_price: document.getElementById('bw_price').value,
-        color_price: document.getElementById('color_price').value,
-        payment_mode: document.getElementById('payment_mode').value,
-        gateway: document.getElementById('gateway').value,
-        razorpay_key_id: document.getElementById('razorpay_key_id').value,
-        razorpay_key_secret: document.getElementById('razorpay_key_secret').value,
-        phonepe_merchant_id: document.getElementById('phonepe_merchant_id').value,
-        phonepe_salt_key: document.getElementById('phonepe_salt_key').value,
-        phonepe_salt_index: document.getElementById('phonepe_salt_index').value,
-        password
+        shopName: document.getElementById('shopName').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        printerModel: document.getElementById('printerModel').value,
+        phone: document.getElementById('phone').value.trim(),
+        bwPrice: document.getElementById('bwPrice').value,
+        colorPrice: document.getElementById('colorPrice').value,
+        razorpayKeyId: document.getElementById('razorpayKeyId').value.trim(),
+        razorpayKeySecret: document.getElementById('razorpayKeySecret').value.trim(),
+        password: document.getElementById('password').value
       };
 
-      const btn = document.getElementById('register-btn');
-      btn.disabled = true;
-      btn.innerText = 'Processing...';
-
       try {
-        const res = await fetch('/api/register', {
+        const res = await fetch('/api/shop/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
         });
         const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || 'Registration failed');
-        }
-
-        const showSuccessReceipt = (shopData) => {
-          document.getElementById('rec-shop-name').innerText = shopData.name || name;
-          document.getElementById('rec-shop-id').innerText = shopData.id || data.shop_id;
-          document.getElementById('rec-email').innerText = shopData.email || email;
-          document.getElementById('rec-printer').innerText = shopData.printer || body.printer;
-          document.getElementById('rec-phone').innerText = shopData.phone || body.phone || 'N/A';
-          document.getElementById('rec-bw').innerText = '₹' + (shopData.bw_price || body.bw_price);
-          document.getElementById('rec-color').innerText = '₹' + (shopData.color_price || body.color_price);
-          document.getElementById('rec-gateway').innerText = shopData.gateway || body.gateway;
-          document.getElementById('rec-qr-link').href = '/print/' + (shopData.id || data.shop_id);
-          document.getElementById('success-modal').classList.add('active');
-        };
+        if (!res.ok) throw new Error(data.error || 'Registration failed');
 
         const options = {
-          key: data.razorpay_key,
+          key: data.razorpayKey,
           amount: data.amount * 100,
           currency: 'INR',
-          name: 'QRPrint',
-          description: 'One-Time Setup Fee for ' + name,
-          order_id: data.razorpay_order_id,
+          name: 'PrintEase',
+          description: 'Lifetime Shop Setup Fee',
+          order_id: data.razorpayOrderId,
           handler: async function (response) {
-            const vRes = await fetch('/api/verify-setup-payment', {
+            await fetch('/api/shop/setup-payment', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                shop_id: data.shop_id,
-                razorpay_payment_id: response.razorpay_payment_id || 'pay_mock_123',
-                razorpay_order_id: response.razorpay_order_id || data.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature || ''
+                shopId: data.shopId,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpaySignature: response.razorpay_signature
               })
             });
-            const vData = await vRes.json();
-            showSuccessReceipt(vData.shop || {});
-          },
-          modal: {
-            ondismiss: function() {
-              btn.disabled = false;
-              btn.innerText = 'Pay Setup Fee & Register';
-            }
+            showSuccess(data.shopId);
           }
         };
 
-        if (data.razorpay_order_id.startsWith('order_mock_')) {
+        if (data.razorpayOrderId.startsWith('order_mock_')) {
           setTimeout(async () => {
-            const vRes = await fetch('/api/verify-setup-payment', {
+            await fetch('/api/shop/setup-payment', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                shop_id: data.shop_id,
-                razorpay_payment_id: 'pay_mock_' + Math.random().toString(36).substring(7),
-                razorpay_order_id: data.razorpay_order_id,
-                razorpay_signature: ''
-              })
+              body: JSON.stringify({ shopId: data.shopId, razorpayPaymentId: 'pay_mock_123' })
             });
-            const vData = await vRes.json();
-            showSuccessReceipt(vData.shop || {});
+            showSuccess(data.shopId);
           }, 800);
         } else {
           const rzp = new Razorpay(options);
           rzp.open();
         }
-
       } catch (err) {
-        errorMsg.innerText = err.message;
-        errorMsg.style.display = 'block';
+        document.getElementById('error-text').innerText = err.message;
+        errAlert.classList.remove('hidden');
         btn.disabled = false;
-        btn.innerText = 'Pay Setup Fee & Register';
+        btn.innerHTML = '<i class="fa-solid fa-credit-card"></i> Pay Setup Fee & Register';
       }
+    }
+
+    async function showSuccess(shopId) {
+      confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+      document.getElementById('registration-card').classList.add('hidden');
+      document.getElementById('success-card').classList.remove('hidden');
+      document.getElementById('disp-shop-id').innerText = shopId;
+
+      try {
+        const res = await fetch('/api/shop/' + shopId + '/public');
+        const data = await res.json();
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(window.location.origin + '/shop/' + shopId)}`;
+        document.getElementById('disp-qr-img').src = qrUrl;
+        document.getElementById('download-qr-btn').href = qrUrl;
+      } catch (e) {}
     }
   </script>
 </body>

@@ -1,20 +1,32 @@
 require('dotenv').config();
 const express = require('express');
+const mongoose = require('mongoose');
 const session = require('express-session');
+const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
-const bcrypt = require('bcryptjs');
-const multer = require('multer');
-const QRCode = require('qrcode');
-const Razorpay = require('razorpay');
-const pdfParse = require('pdf-parse');
-const { nanoid } = require('nanoid');
 
-const db = require('./db');
+const Shop = require('./models/Shop');
+const Config = require('./models/Config');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Connect to MongoDB
+const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/printease';
+mongoose.connect(mongoUri)
+  .then(async () => {
+    console.log('🍃 Connected to MongoDB');
+    // Seed default global config if missing
+    const actual = await Config.findOne({ key: 'setupFeeActual' });
+    if (!actual) await Config.create({ key: 'setupFeeActual', value: 999 });
+    const offer = await Config.findOne({ key: 'setupFeeOffer' });
+    if (!offer) await Config.create({ key: 'setupFeeOffer', value: 499 });
+  })
+  .catch(err => {
+    console.warn('MongoDB connection error (running in local fallback mode):', err.message);
+  });
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -23,689 +35,299 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Middleware
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
 
-// Session configuration
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'qr_se_print_secret_key_64_chars_minimum_random_string',
+  secret: process.env.SESSION_SECRET || 'printease-super-secret-key-change-this',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 } // 1 day
+  cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 hours
 }));
 
-// Configure Multer for file uploads (max 20MB)
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadsDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, 'doc-' + uniqueSuffix + ext);
-  }
+// Rate limiting for upload & payment endpoints
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: { error: 'Too many requests from this IP, please try again later.' }
 });
+app.use('/api/upload', apiLimiter);
+app.use('/api/payment', apiLimiter);
 
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 20 * 1024 * 1024 } // 20MB
-});
+// Serve static assets from public folder
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Helper: Clean up files older than 24 hours
-setInterval(() => {
-  fs.readdir(uploadsDir, (err, files) => {
-    if (err) return;
-    const now = Date.now();
-    files.forEach(file => {
-      const filePath = path.join(uploadsDir, file);
-      fs.stat(filePath, (err, stats) => {
-        if (err) return;
-        if (now - stats.mtimeMs > 24 * 60 * 60 * 1000) {
-          fs.unlink(filePath, () => {});
-        }
-      });
-    });
-  });
-}, 60 * 60 * 1000); // Check hourly
+// API Routes
+app.use('/api/auth',       require('./routes/auth'));
+app.use('/api/shop',       require('./routes/shop'));
+app.use('/api/admin',      require('./routes/admin'));
+app.use('/api/upload',     require('./routes/upload'));
+app.use('/api/payment',    require('./routes/payment'));
+app.use('/api/agent',      require('./routes/agent'));
+app.use('/api/superadmin', require('./routes/superadmin'));
 
-// ==========================================
-// PUBLIC HTML ROUTES
-// ==========================================
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// HTML Page Routes
+app.get('/',           (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
+app.get('/dashboard',  (req, res) => res.sendFile(path.join(__dirname, 'public/dashboard.html')));
+app.get('/admin',      (req, res) => res.sendFile(path.join(__dirname, 'public/admin.html')));
+app.get('/superadmin', (req, res) => res.sendFile(path.join(__dirname, 'public/superadmin.html')));
 
-app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
-});
-
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-
-app.get('/superadmin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'superadmin.html'));
-});
-
-app.get('/print/:shopId', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'print.html'));
-});
-
-// ==========================================
-// PRICING API
-// ==========================================
-app.get('/api/pricing', (req, res) => {
+// Dynamic Customer Upload Route /shop/:shopId
+app.get('/shop/:shopId', async (req, res) => {
   try {
-    const actual = db.prepare(`SELECT value FROM settings WHERE key = 'actual_price'`).get();
-    const offer = db.prepare(`SELECT value FROM settings WHERE key = 'offer_price'`).get();
-    res.json({
-      actual_price: actual ? parseFloat(actual.value) : 1,
-      offer_price: offer ? parseFloat(offer.value) : 1
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    const shop = await Shop.findOne({ shopId: req.params.shopId });
+    const shopName = shop ? shop.shopName : 'Print Shop';
+    const bwPrice = shop ? shop.bwPrice : 2;
+    const colorPrice = shop ? shop.colorPrice : 8;
+    const paymentMode = shop ? shop.paymentMode : 'both';
+    const razorpayKeyId = shop ? (shop.razorpayKeyId || '') : '';
 
-// ==========================================
-// SHOP REGISTRATION API
-// ==========================================
-app.post('/api/register', async (req, res) => {
-  try {
-    const {
-      name, email, printer, address, phone, bw_price, color_price,
-      payment_mode, gateway, razorpay_key_id, razorpay_key_secret,
-      phonepe_merchant_id, phonepe_salt_key, phonepe_salt_index, password
-    } = req.body;
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${shopName} — PrintEase Upload</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    @keyframes float { 0%,100% {transform:translateY(0);} 50% {transform:translateY(-10px);} }
+    .animate-float { animation: float 3s ease-in-out infinite; }
+    .btn-ripple { position: relative; overflow: hidden; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen pb-12">
+  <header class="bg-white border-b border-gray-100 sticky top-0 z-50">
+    <div class="max-w-sm mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="/" class="font-bold text-violet-600 text-lg">Print<span class="text-gray-800">Ease</span></a>
+      <span class="text-xs bg-violet-100 text-violet-700 px-3 py-1 rounded-full font-medium truncate max-w-[200px]">
+        <i class="fa-solid fa-store mr-1"></i>${shopName}
+      </span>
+    </div>
+  </header>
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Shop name, Email, and Password are required' });
-    }
+  <div class="max-w-sm mx-auto px-4 py-6">
+    <!-- File drop zone -->
+    <div id="drop-zone" onclick="document.getElementById('file-input').click()" class="border-2 border-dashed border-violet-300 rounded-2xl p-8 text-center cursor-pointer transition-all hover:border-violet-500 hover:bg-violet-50 active:scale-98 bg-white shadow-sm">
+      <i class="fa-solid fa-cloud-arrow-up text-4xl text-violet-400 mb-3 animate-float block"></i>
+      <p class="font-semibold text-gray-700">File drop karo ya click karo</p>
+      <p class="text-xs text-gray-400 mt-1">PDF, JPG, PNG, Word — max 20MB</p>
+    </div>
+    <input type="file" id="file-input" class="hidden" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onchange="handleFileSelect(this.files[0])">
 
-    const shop_id = 'SHOP_' + nanoid(8);
-    const password_hash = await bcrypt.hash(password, 10);
+    <div id="uploading-state" class="hidden mt-6 text-center py-8">
+      <i class="fa-solid fa-circle-notch fa-spin text-3xl text-violet-600 mb-2 block"></i>
+      <p class="text-sm font-medium text-gray-600">File uploading & analyzing...</p>
+    </div>
 
-    const stmt = db.prepare(`
-      INSERT INTO shops (
-        id, name, email, printer, address, phone, bw_price, color_price,
-        payment_mode, gateway, razorpay_key_id, razorpay_key_secret,
-        phonepe_merchant_id, phonepe_salt_key, phonepe_salt_index, password_hash, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-    `);
+    <!-- Print options (shown after file selected) -->
+    <div id="print-options" class="hidden mt-5 space-y-4">
+      <div class="flex items-center gap-3 bg-violet-50 border border-violet-200 rounded-xl p-3">
+        <i class="fa-solid fa-file-lines text-violet-600 text-lg"></i>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-gray-800 truncate" id="file-name-display"></p>
+          <p class="text-xs text-gray-500" id="file-pages-display"></p>
+        </div>
+        <button onclick="clearFile()" class="text-gray-400 hover:text-red-500 transition-colors p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
 
-    stmt.run(
-      shop_id, name, email, printer || 'Auto Detect', address || '', phone || '',
-      parseFloat(bw_price) || 1, parseFloat(color_price) || 5,
-      payment_mode || 'both', gateway || 'razorpay',
-      razorpay_key_id || '', razorpay_key_secret || '',
-      phonepe_merchant_id || '', phonepe_salt_key || '', phonepe_salt_index || '1',
-      password_hash
-    );
+      <div class="grid grid-cols-2 gap-3">
+        <button id="btn-bw" onclick="setColor('bw')" class="option-btn py-3 px-3 rounded-xl border-2 font-medium text-sm transition-all border-violet-600 bg-violet-50 text-violet-700 text-center">
+          ⬛ B&W — ₹${bwPrice}/pg
+        </button>
+        <button id="btn-color" onclick="setColor('color')" class="option-btn py-3 px-3 rounded-xl border-2 font-medium text-sm transition-all border-gray-200 text-gray-600 text-center">
+          🌈 Color — ₹${colorPrice}/pg
+        </button>
+      </div>
 
-    // Fetch dynamic setup fee
-    const offerRow = db.prepare(`SELECT value FROM settings WHERE key = 'offer_price'`).get();
-    const setupFeeAmount = offerRow ? parseFloat(offerRow.value) : 1;
+      <div class="flex items-center justify-between bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+        <span class="text-sm font-medium text-gray-700">Copies</span>
+        <div class="flex items-center gap-4">
+          <button onclick="changeCopies(-1)" class="w-9 h-9 rounded-full bg-gray-100 border border-gray-200 text-gray-700 font-bold hover:bg-violet-50 hover:border-violet-300 transition-all flex items-center justify-center text-lg">−</button>
+          <span class="text-lg font-bold w-6 text-center" id="copies-display">1</span>
+          <button onclick="changeCopies(1)" class="w-9 h-9 rounded-full bg-gray-100 border border-gray-200 text-gray-700 font-bold hover:bg-violet-50 hover:border-violet-300 transition-all flex items-center justify-center text-lg">+</button>
+        </div>
+      </div>
 
-    let razorpay_order_id = 'order_mock_' + nanoid(10);
-    const platformKey = process.env.PLATFORM_RAZORPAY_KEY_ID || 'rzp_test_mockkeyid';
+      <div class="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-2xl p-4 text-white shadow-md">
+        <div class="flex justify-between items-center">
+          <div>
+            <p class="text-xs text-violet-200">Total Amount</p>
+            <p class="text-3xl font-bold" id="total-amount">₹0</p>
+          </div>
+          <div class="text-right text-xs text-violet-200">
+            <p id="calc-detail">0 pages × ₹0</p>
+          </div>
+        </div>
+      </div>
 
-    if (process.env.PLATFORM_RAZORPAY_KEY_ID && process.env.PLATFORM_RAZORPAY_KEY_SECRET) {
-      try {
-        const instance = new Razorpay({
-          key_id: process.env.PLATFORM_RAZORPAY_KEY_ID,
-          key_secret: process.env.PLATFORM_RAZORPAY_KEY_SECRET,
-        });
-        const order = await instance.orders.create({
-          amount: Math.round(setupFeeAmount * 100), // amount in paise
-          currency: 'INR',
-          receipt: 'receipt_' + shop_id,
-        });
-        razorpay_order_id = order.id;
-      } catch (e) {
-        console.warn('Razorpay order creation fallback to mock:', e.message);
-      }
-    }
+      <div id="payment-buttons" class="space-y-3">
+        ${paymentMode !== 'counter' ? `<button id="btn-pay-online" onclick="payOnline()" class="btn-ripple w-full py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:shadow-violet-300 transition-all active:scale-95 text-base flex items-center justify-center"><i class="fa-solid fa-credit-card mr-2"></i>Pay Online — <span id="btn-amount" class="ml-1">₹0</span></button>` : ''}
+        ${paymentMode !== 'online' ? `<button id="btn-pay-counter" onclick="payCounter()" class="btn-ripple w-full py-3.5 bg-white text-gray-700 font-bold rounded-2xl border-2 border-gray-200 hover:border-violet-300 hover:bg-violet-50 transition-all active:scale-95 text-base flex items-center justify-center"><i class="fa-solid fa-hand-holding-rupee mr-2 text-green-600"></i>Pay at Counter</button>` : ''}
+      </div>
+    </div>
 
-    res.json({
-      shop_id,
-      razorpay_order_id,
-      razorpay_key: platformKey,
-      amount: setupFeeAmount
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    <div id="print-tracker" class="hidden mt-6 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
+      <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+        <i class="fa-solid fa-circle-check text-3xl text-green-500"></i>
+      </div>
+      <p class="font-bold text-gray-800 text-lg">Order Queued!</p>
+      <p class="text-sm text-gray-500 mb-4">Aapka print job queue mein bhej diya gaya hai</p>
+      <div class="bg-gray-50 rounded-xl p-3 text-xs text-gray-500 font-mono" id="tracker-job-id">Job ID: -</div>
+    </div>
+  </div>
 
-app.post('/api/verify-setup-payment', (req, res) => {
-  try {
-    const { shop_id, razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
-
-    // Verify signature if keys are provided
-    if (process.env.PLATFORM_RAZORPAY_KEY_SECRET && razorpay_signature && !razorpay_order_id.startsWith('order_mock_')) {
-      const generated_signature = crypto
-        .createHmac('sha256', process.env.PLATFORM_RAZORPAY_KEY_SECRET)
-        .update(razorpay_order_id + '|' + razorpay_payment_id)
-        .digest('hex');
-
-      if (generated_signature !== razorpay_signature) {
-        return res.status(400).json({ error: 'Invalid payment signature' });
-      }
-    }
-
-    const offerRow = db.prepare(`SELECT value FROM settings WHERE key = 'offer_price'`).get();
-    const setupFeePaid = offerRow ? parseFloat(offerRow.value) : 1;
-
-    db.prepare(`UPDATE shops SET status = 'active', setup_fee_paid = ? WHERE id = ?`).run(setupFeePaid, shop_id);
-    const updatedShop = db.prepare(`SELECT * FROM shops WHERE id = ?`).get(shop_id);
-    if (updatedShop) delete updatedShop.password_hash;
-
-    res.json({ success: true, shop_id, shop: updatedShop });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ==========================================
-// SHOP ADMIN API
-// ==========================================
-app.post('/api/admin/login', async (req, res) => {
-  try {
-    const { shop_id, email, password } = req.body;
-    const identifier = email || shop_id;
-    const shop = db.prepare(`SELECT * FROM shops WHERE id = ?`).get(identifier);
-    if (!shop) {
-      return res.status(401).json({ error: 'Shop not found for given Email / Shop ID' });
-    }
-
-    if (!shop.password_hash) {
-      return res.status(400).json({ error: 'Password not set for this shop. Please use set password option.' });
-    }
-
-    const match = await bcrypt.compare(password, shop.password_hash);
-    if (!match) {
-      return res.status(401).json({ error: 'Invalid password' });
-    }
-
-    req.session.shop_id = shop.id;
-    const { password_hash, ...shopData } = shop;
-    res.json({ success: true, shop: shopData });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/admin/me', (req, res) => {
-  if (!req.session.shop_id) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  try {
-    const shop = db.prepare(`SELECT * FROM shops WHERE id = ?`).get(req.session.shop_id);
-    if (!shop) return res.status(404).json({ error: 'Shop not found' });
-
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    const stats = db.prepare(`
-      SELECT 
-        COUNT(CASE WHEN date(created_at) = ? AND print_status = 'done' THEN 1 END) as today_prints,
-        COALESCE(SUM(CASE WHEN date(created_at) = ? AND payment_status IN ('paid', 'counter') THEN amount ELSE 0 END), 0) as today_earnings,
-        COUNT(*) as total_orders
-      FROM print_jobs WHERE shop_id = ?
-    `).get(todayStr, todayStr, shop.id);
-
-    const { password_hash, ...shopData } = shop;
-    res.json({
-      shop: shopData,
-      today_prints: stats.today_prints || 0,
-      today_earnings: stats.today_earnings || 0,
-      total_orders: stats.total_orders || 0
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/admin/settings', (req, res) => {
-  if (!req.session.shop_id) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    const {
-      name, printer, address, phone, bw_price, color_price,
-      payment_mode, gateway, razorpay_key_id, razorpay_key_secret,
-      phonepe_merchant_id, phonepe_salt_key, phonepe_salt_index
-    } = req.body;
-
-    db.prepare(`
-      UPDATE shops SET
-        name = ?, printer = ?, address = ?, phone = ?, bw_price = ?, color_price = ?,
-        payment_mode = ?, gateway = ?, razorpay_key_id = ?, razorpay_key_secret = ?,
-        phonepe_merchant_id = ?, phonepe_salt_key = ?, phonepe_salt_index = ?
-      WHERE id = ?
-    `).run(
-      name, printer, address, phone, parseFloat(bw_price), parseFloat(color_price),
-      payment_mode, gateway, razorpay_key_id, razorpay_key_secret,
-      phonepe_merchant_id, phonepe_salt_key, phonepe_salt_index || '1',
-      req.session.shop_id
-    );
-
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/admin/change-password', async (req, res) => {
-  if (!req.session.shop_id) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    const { current_password, new_password } = req.body;
-    const shop = db.prepare(`SELECT password_hash FROM shops WHERE id = ?`).get(req.session.shop_id);
-
-    if (shop.password_hash) {
-      const match = await bcrypt.compare(current_password, shop.password_hash);
-      if (!match) return res.status(400).json({ error: 'Current password incorrect' });
-    }
-
-    const newHash = await bcrypt.hash(new_password, 10);
-    db.prepare(`UPDATE shops SET password_hash = ? WHERE id = ?`).run(newHash, req.session.shop_id);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/admin/set-password', async (req, res) => {
-  try {
-    const { shop_id, new_password } = req.body;
-    const shop = db.prepare(`SELECT password_hash FROM shops WHERE id = ?`).get(shop_id);
-    if (!shop) return res.status(404).json({ error: 'Shop not found' });
-    if (shop.password_hash) {
-      return res.status(400).json({ error: 'Password already exists. Please login.' });
-    }
-    const newHash = await bcrypt.hash(new_password, 10);
-    db.prepare(`UPDATE shops SET password_hash = ? WHERE id = ?`).run(newHash, shop_id);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/admin/jobs', (req, res) => {
-  if (!req.session.shop_id) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    const jobs = db.prepare(`
-      SELECT * FROM print_jobs WHERE shop_id = ? ORDER BY created_at DESC LIMIT 20
-    `).all(req.session.shop_id);
-    res.json({ jobs });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/admin/qrcode', async (req, res) => {
-  if (!req.session.shop_id) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-    const targetUrl = `${baseUrl}/print/${req.session.shop_id}`;
-    const qr_base64 = await QRCode.toDataURL(targetUrl, { width: 300, margin: 2 });
-    res.json({ qr_base64, target_url: targetUrl });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/admin/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.json({ success: true });
-  });
-});
-
-// ==========================================
-// CUSTOMER PRINT API
-// ==========================================
-app.get('/api/shop/:shopId', (req, res) => {
-  try {
-    const shop = db.prepare(`
-      SELECT name, printer, bw_price, color_price, payment_mode, gateway, status FROM shops WHERE id = ?
-    `).get(req.params.shopId);
-
-    if (!shop) return res.status(404).json({ error: 'Shop not found' });
-    if (shop.status === 'pending') {
-      return res.status(403).json({ error: 'Shop registration is pending activation.' });
-    }
-
-    res.json(shop);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/upload/:shopId', upload.single('file'), async (req, res) => {
-  try {
-    const shopId = req.params.shopId;
-    const shop = db.prepare(`SELECT bw_price, color_price FROM shops WHERE id = ?`).get(shopId);
-    if (!shop) return res.status(404).json({ error: 'Shop not found' });
-
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-
-    const filePath = req.file.path;
-    const ext = path.extname(req.file.originalname).toLowerCase();
+  <script>
+    const shopId = "${req.params.shopId}";
+    const bwPrice = ${bwPrice};
+    const colorPrice = ${colorPrice};
+    let currentJobId = null;
     let detectedPages = 1;
+    let selectedColorMode = 'bw';
+    let selectedCopies = 1;
 
-    if (ext === '.pdf') {
+    async function handleFileSelect(file) {
+      if (!file) return;
+      document.getElementById('drop-zone').classList.add('hidden');
+      document.getElementById('uploading-state').classList.remove('hidden');
+
+      const formData = new FormData();
+      formData.append('file', file);
+
       try {
-        const dataBuffer = fs.readFileSync(filePath);
-        const pdfData = await pdfParse(dataBuffer);
-        detectedPages = pdfData.numpages || 1;
-      } catch (pdfErr) {
-        console.warn('PDF parsing fallback to 1 page:', pdfErr.message);
+        const res = await fetch('/api/upload/' + shopId, { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+        currentJobId = data.jobId;
+        detectedPages = data.pages;
+
+        document.getElementById('file-name-display').innerText = data.originalName;
+        document.getElementById('file-pages-display').innerText = data.pages + ' Page(s) Detected';
+
+        updateTotal();
+
+        document.getElementById('uploading-state').classList.add('hidden');
+        document.getElementById('print-options').classList.remove('hidden');
+      } catch (e) {
+        alert(e.message);
+        document.getElementById('uploading-state').classList.add('hidden');
+        document.getElementById('drop-zone').classList.remove('hidden');
       }
-    } else if (['.jpg', '.jpeg', '.png'].includes(ext)) {
-      detectedPages = 1;
-    } else if (['.doc', '.docx'].includes(ext)) {
-      detectedPages = 1; // estimated fallback
     }
 
-    const jobId = 'JOB_' + nanoid(10);
+    function setColor(mode) {
+      selectedColorMode = mode;
+      const bwBtn = document.getElementById('btn-bw');
+      const clrBtn = document.getElementById('btn-color');
+      if (mode === 'bw') {
+        bwBtn.className = "option-btn py-3 px-3 rounded-xl border-2 font-medium text-sm transition-all border-violet-600 bg-violet-50 text-violet-700 text-center";
+        clrBtn.className = "option-btn py-3 px-3 rounded-xl border-2 font-medium text-sm transition-all border-gray-200 text-gray-600 text-center";
+      } else {
+        clrBtn.className = "option-btn py-3 px-3 rounded-xl border-2 font-medium text-sm transition-all border-violet-600 bg-violet-50 text-violet-700 text-center";
+        bwBtn.className = "option-btn py-3 px-3 rounded-xl border-2 font-medium text-sm transition-all border-gray-200 text-gray-600 text-center";
+      }
+      updateTotal();
+    }
 
-    db.prepare(`
-      INSERT INTO print_jobs (id, shop_id, filename, original_name, pages, bw_pages, color_pages, amount, print_status, payment_status)
-      VALUES (?, ?, ?, ?, ?, ?, 0, 0, 'queued', 'pending')
-    `).run(jobId, shopId, req.file.filename, req.file.originalname, detectedPages, detectedPages);
+    function changeCopies(delta) {
+      selectedCopies = Math.max(1, selectedCopies + delta);
+      document.getElementById('copies-display').innerText = selectedCopies;
+      updateTotal();
+    }
 
-    res.json({
-      job_id: jobId,
-      filename: req.file.filename,
-      original_name: req.file.originalname,
-      pages: detectedPages,
-      bw_price: shop.bw_price,
-      color_price: shop.color_price
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    function updateTotal() {
+      const rate = selectedColorMode === 'color' ? colorPrice : bwPrice;
+      const total = detectedPages * rate * selectedCopies;
+      document.getElementById('total-amount').innerText = '₹' + total;
+      document.getElementById('calc-detail').innerText = detectedPages + ' pgs × ₹' + rate + ' × ' + selectedCopies + ' copy';
+      const btnAmt = document.getElementById('btn-amount');
+      if (btnAmt) btnAmt.innerText = '₹' + total;
+    }
 
-app.post('/api/job/configure', async (req, res) => {
-  try {
-    const { job_id, bw_pages, color_pages, payment_mode } = req.body;
-    const job = db.prepare(`SELECT * FROM print_jobs WHERE id = ?`).get(job_id);
-    if (!job) return res.status(404).json({ error: 'Job not found' });
+    function clearFile() {
+      currentJobId = null;
+      document.getElementById('print-options').classList.add('hidden');
+      document.getElementById('drop-zone').classList.remove('hidden');
+      document.getElementById('file-input').value = '';
+    }
 
-    const shop = db.prepare(`SELECT * FROM shops WHERE id = ?`).get(job.shop_id);
-    if (!shop) return res.status(404).json({ error: 'Shop not found' });
+    async function payOnline() {
+      try {
+        const res = await fetch('/api/payment/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId: currentJobId, colorMode: selectedColorMode, copies: selectedCopies })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
 
-    const bwCount = parseInt(bw_pages) || 0;
-    const colorCount = parseInt(color_pages) || 0;
-    const totalPages = bwCount + colorCount;
-    const amount = (bwCount * shop.bw_price) + (colorCount * shop.color_price);
-
-    let razorpay_order_id = null;
-    let razorpay_key = shop.razorpay_key_id;
-    let phonepe_url = null;
-
-    if (payment_mode === 'online') {
-      if (shop.gateway === 'phonepe' && shop.phonepe_merchant_id && shop.phonepe_salt_key) {
-        // PhonePe payload calculation mockup/integration
-        const merchantTransactionId = 'TXN_' + nanoid(10);
-        const payload = {
-          merchantId: shop.phonepe_merchant_id,
-          merchantTransactionId: merchantTransactionId,
-          merchantUserId: 'CUST_' + nanoid(6),
-          amount: Math.round(amount * 100),
-          redirectUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/print/${shop.id}?job_id=${job_id}`,
-          redirectMode: 'POST',
-          paymentInstrument: { type: 'PAY_PAGE' }
+        const options = {
+          key: data.razorpayKey,
+          amount: data.amount * 100,
+          currency: 'INR',
+          name: '${shopName}',
+          description: 'Document Printing',
+          order_id: data.razorpayOrderId,
+          handler: async function (response) {
+            await fetch('/api/payment/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jobId: currentJobId,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpaySignature: response.razorpay_signature
+              })
+            });
+            showTracker();
+          }
         };
 
-        const base64Payload = Buffer.from(JSON.stringify(payload)).toString('base64');
-        const checksum = crypto.createHash('sha256')
-          .update(base64Payload + '/pg/v1/pay' + shop.phonepe_salt_key)
-          .digest('hex') + '***' + (shop.phonepe_salt_index || '1');
-
-        phonepe_url = `https://api.phonepe.com/apis/hermes/pg/v1/pay?payload=${base64Payload}&checksum=${checksum}`;
-      } else {
-        // Default Razorpay
-        razorpay_order_id = 'ord_cust_' + nanoid(10);
-        if (shop.razorpay_key_id && shop.razorpay_key_secret) {
-          try {
-            const instance = new Razorpay({
-              key_id: shop.razorpay_key_id,
-              key_secret: shop.razorpay_key_secret,
+        if (data.razorpayOrderId.startsWith('order_mock_')) {
+          setTimeout(async () => {
+            await fetch('/api/payment/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jobId: currentJobId, razorpayPaymentId: 'pay_mock_' + Math.random().toString(36).substring(7), razorpayOrderId: data.razorpayOrderId, razorpaySignature: '' })
             });
-            const order = await instance.orders.create({
-              amount: Math.round(amount * 100),
-              currency: 'INR',
-              receipt: 'rcpt_' + job_id
-            });
-            razorpay_order_id = order.id;
-          } catch (e) {
-            console.warn('Shop Razorpay fallback to mock:', e.message);
-          }
+            showTracker();
+          }, 800);
+        } else {
+          const rzp = new Razorpay(options);
+          rzp.open();
         }
-      }
+      } catch (e) { alert(e.message); }
     }
 
-    db.prepare(`
-      UPDATE print_jobs SET
-        pages = ?, bw_pages = ?, color_pages = ?, amount = ?, payment_mode = ?, razorpay_order_id = ?
-      WHERE id = ?
-    `).run(totalPages, bwCount, colorCount, amount, payment_mode, razorpay_order_id, job_id);
-
-    res.json({
-      amount,
-      razorpay_order_id,
-      razorpay_key,
-      phonepe_url
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/job/verify-payment', (req, res) => {
-  try {
-    const { job_id, razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
-    const job = db.prepare(`SELECT * FROM print_jobs WHERE id = ?`).get(job_id);
-    if (!job) return res.status(404).json({ error: 'Job not found' });
-
-    const shop = db.prepare(`SELECT razorpay_key_secret FROM shops WHERE id = ?`).get(job.shop_id);
-
-    if (shop && shop.razorpay_key_secret && razorpay_signature && !razorpay_order_id.startsWith('ord_cust_')) {
-      const generated_signature = crypto
-        .createHmac('sha256', shop.razorpay_key_secret)
-        .update(razorpay_order_id + '|' + razorpay_payment_id)
-        .digest('hex');
-
-      if (generated_signature !== razorpay_signature) {
-        return res.status(400).json({ error: 'Invalid payment signature' });
-      }
+    async function payCounter() {
+      try {
+        const res = await fetch('/api/payment/counter', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId: currentJobId, colorMode: selectedColorMode, copies: selectedCopies })
+        });
+        if (res.ok) showTracker();
+      } catch (e) { alert(e.message); }
     }
 
-    db.prepare(`
-      UPDATE print_jobs SET
-        payment_status = 'paid', print_status = 'queued', razorpay_payment_id = ?
-      WHERE id = ?
-    `).run(razorpay_payment_id || 'pay_mock_' + nanoid(8), job_id);
-
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/job/counter-confirm', (req, res) => {
-  try {
-    const { job_id } = req.body;
-    db.prepare(`
-      UPDATE print_jobs SET payment_status = 'counter', print_status = 'queued' WHERE id = ?
-    `).run(job_id);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/agent/job-status/:jobId', (req, res) => {
-  try {
-    const job = db.prepare(`SELECT print_status, payment_status FROM print_jobs WHERE id = ?`).get(req.params.jobId);
-    if (!job) return res.status(404).json({ error: 'Job not found' });
-    res.json(job);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ==========================================
-// PRINT AGENT API
-// ==========================================
-const validateAgentToken = (token) => {
-  const expectedToken = process.env.AGENT_TOKEN || 'secret_agent_token_123';
-  return token === expectedToken;
-};
-
-app.get('/api/agent/jobs/:shopId', (req, res) => {
-  try {
-    const { token } = req.query;
-    if (!validateAgentToken(token)) {
-      return res.status(401).json({ error: 'Invalid agent token' });
+    function showTracker() {
+      document.getElementById('print-options').classList.add('hidden');
+      document.getElementById('print-tracker').classList.remove('hidden');
+      document.getElementById('tracker-job-id').innerText = 'Job ID: ' + currentJobId;
     }
-
-    const jobs = db.prepare(`
-      SELECT id as job_id, filename, pages, bw_pages, color_pages
-      FROM print_jobs
-      WHERE shop_id = ? AND print_status = 'queued' AND payment_status IN ('paid', 'counter')
-    `).all(req.params.shopId);
-
-    res.json({ jobs });
+  </script>
+</body>
+</html>`;
+    res.send(html);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).send('Error loading shop page: ' + err.message);
   }
-});
-
-app.post('/api/agent/job-done', (req, res) => {
-  try {
-    const { job_id, status, token } = req.body;
-    if (!validateAgentToken(token)) {
-      return res.status(401).json({ error: 'Invalid agent token' });
-    }
-
-    const print_status = status === 'done' ? 'done' : 'failed';
-    db.prepare(`UPDATE print_jobs SET print_status = ? WHERE id = ?`).run(print_status, job_id);
-
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/agent/download/:jobId', (req, res) => {
-  try {
-    const { token } = req.query;
-    if (!validateAgentToken(token)) {
-      return res.status(401).json({ error: 'Invalid agent token' });
-    }
-
-    const job = db.prepare(`SELECT filename FROM print_jobs WHERE id = ?`).get(req.params.jobId);
-    if (!job) return res.status(404).json({ error: 'Job not found' });
-
-    const filePath = path.join(uploadsDir, job.filename);
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'File not found on server' });
-    }
-
-    res.sendFile(filePath);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ==========================================
-// SUPER ADMIN API
-// ==========================================
-app.post('/api/superadmin/login', (req, res) => {
-  const { admin_id, password } = req.body;
-  const expectedId = process.env.SUPER_ADMIN_ID || 'superadmin';
-  const expectedPass = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
-
-  if (admin_id === expectedId && password === expectedPass) {
-    req.session.is_superadmin = true;
-    res.json({ success: true });
-  } else {
-    res.status(401).json({ error: 'Invalid superadmin credentials' });
-  }
-});
-
-app.get('/api/superadmin/stats', (req, res) => {
-  if (!req.session.is_superadmin) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    const total_shops = db.prepare(`SELECT COUNT(*) as count FROM shops`).get().count;
-    const active_shops = db.prepare(`SELECT COUNT(*) as count FROM shops WHERE status = 'active'`).get().count;
-    const pending_shops = db.prepare(`SELECT COUNT(*) as count FROM shops WHERE status = 'pending'`).get().count;
-    const total_setup_fees = db.prepare(`SELECT COALESCE(SUM(setup_fee_paid), 0) as total FROM shops`).get().total;
-
-    const actual = db.prepare(`SELECT value FROM settings WHERE key = 'actual_price'`).get();
-    const offer = db.prepare(`SELECT value FROM settings WHERE key = 'offer_price'`).get();
-
-    res.json({
-      total_shops,
-      active_shops,
-      pending_shops,
-      total_setup_fees,
-      actual_price: actual ? parseFloat(actual.value) : 1,
-      offer_price: offer ? parseFloat(offer.value) : 1
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/superadmin/shops', (req, res) => {
-  if (!req.session.is_superadmin) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    const { filter } = req.query;
-    let query = `
-      SELECT 
-        s.*,
-        COUNT(j.id) as total_jobs,
-        COALESCE(SUM(CASE WHEN j.payment_status IN ('paid', 'counter') THEN j.amount ELSE 0 END), 0) as print_earnings
-      FROM shops s
-      LEFT JOIN print_jobs j ON s.id = j.shop_id
-    `;
-    const params = [];
-    if (filter === 'active') {
-      query += ` WHERE s.status = 'active'`;
-    } else if (filter === 'pending') {
-      query += ` WHERE s.status = 'pending'`;
-    }
-    query += ` GROUP BY s.id ORDER BY s.created_at DESC`;
-
-    const shops = db.prepare(query).all(...params);
-    res.json({ shops });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/superadmin/pricing', (req, res) => {
-  if (!req.session.is_superadmin) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    const { actual_price, offer_price } = req.body;
-    db.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('actual_price', ?)`).run(String(actual_price));
-    db.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('offer_price', ?)`).run(String(offer_price));
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/superadmin/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.json({ success: true });
-  });
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 QRPrint server running on http://localhost:${PORT}`);
+  console.log(`🚀 PrintEase server running on http://localhost:${PORT}`);
 });

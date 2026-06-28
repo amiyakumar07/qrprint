@@ -1,663 +1,354 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Shop Owner Admin - QRPrint</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="stylesheet" href="/style.css">
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-  <script src="/firebase-config.js"></script>
+  <title>Shop Owner Panel — PrintEase</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            violet: {
+              50:  '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd',
+              400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9',
+            }
+          }
+        }
+      }
+    }
+  </script>
 </head>
-<body>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen">
 
-  <!-- HEADER -->
-  <header>
-    <div class="nav-container">
-      <div class="nav-left">
-        <a href="/" class="logo"><img src="/logo.jpg" alt="QRPrint" class="brand-logo-img"> QRPrint Admin</a>
+  <!-- LOGIN VIEW (shown if not authed) -->
+  <div id="login-view" class="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-gray-900 via-violet-950 to-indigo-950">
+    <div class="max-w-md w-full bg-white rounded-3xl p-8 sm:p-10 shadow-2xl border border-gray-100">
+      <div class="text-center mb-8">
+        <a href="/" class="inline-flex items-center gap-2 mb-3">
+          <div class="w-10 h-10 bg-violet-600 rounded-xl flex items-center justify-center text-white text-lg shadow-md">
+            <i class="fa-solid fa-print"></i>
+          </div>
+          <span class="font-bold text-2xl text-gray-900">Print<span class="text-violet-600">Ease</span></span>
+        </a>
+        <h2 class="text-xl font-bold text-gray-800">Shop Owner Login 🔑</h2>
+        <p class="text-xs text-gray-500 mt-1">Apni Shop ID ya Email se login karein</p>
       </div>
-      <div class="nav-center">
-        <a href="/dashboard">Pricing</a>
-        <a href="/" onclick="openCompanyModal('about')">About Us</a>
-      </div>
-      <div class="nav-right" id="nav-auth-container">
-        <button class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle Dark/Light Theme">🌙</button>
-        <div id="logout-container" style="display: none;">
-          <button onclick="handleLogout()" class="btn btn-outline">Logout Shop</button>
-        </div>
-        <a href="#" onclick="openAuthModal('login')" class="btn btn-outline">Firebase Login</a>
-      </div>
-    </div>
-  </header>
 
-  <main class="container">
-    <!-- LOGIN VIEW -->
-    <div id="login-view" class="card" style="max-width: 450px; margin: 3rem auto;">
-      <h2 style="text-align: center; margin-bottom: 1.5rem; color: var(--text-main);">Shop Owner Login 🔑</h2>
-      <div id="login-error" style="color: var(--danger); display: none; margin-bottom: 1rem; text-align: center;"></div>
-      
-      <div class="form-group">
-        <label>Email Address / Shop ID</label>
-        <input type="text" id="login-shop-id" class="form-control" placeholder="e.g. sharma.print@example.com or SHOP_abc123">
-      </div>
-      
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="login-password" class="form-control" placeholder="Password">
-      </div>
-      
-      <button class="btn btn-primary" style="width: 100%; font-size: 1rem; padding: 0.75rem;" onclick="handleLogin()">Login to Dashboard</button>
-      
-      <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--header-border);">
-      <div style="text-align: center;">
-        <small style="color: var(--text-muted);">First time logging in without password?</small><br>
-        <a href="#" onclick="toggleSetPasswordModal(true)" style="color: var(--primary); font-weight: 700;">Set your password here</a>
-      </div>
-    </div>
+      <div id="login-error" class="hidden mb-6 p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-semibold"></div>
 
-    <!-- SET PASSWORD MODAL / FORM -->
-    <div id="set-pass-view" class="card" style="max-width: 450px; margin: 3rem auto; display: none;">
-      <h3 style="text-align: center; margin-bottom: 1rem;">Set New Password 🔒</h3>
-      <div id="set-pass-error" style="color: var(--danger); display: none; margin-bottom: 1rem; text-align: center;"></div>
-      <div class="form-group">
-        <label>Shop ID</label>
-        <input type="text" id="sp-shop-id" class="form-control" placeholder="SHOP_xxxxxx">
-      </div>
-      <div class="form-group">
-        <label>New Password</label>
-        <input type="password" id="sp-password" class="form-control" placeholder="New Password">
-      </div>
-      <button class="btn btn-primary" style="width: 100%;" onclick="handleSetPassword()">Save Password</button>
-      <button class="btn btn-outline" style="width: 100%; margin-top: 8px;" onclick="toggleSetPasswordModal(false)">Cancel</button>
-    </div>
-
-    <!-- DASHBOARD VIEW -->
-    <div id="dashboard-view" style="display: none;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <form onsubmit="handleLogin(event)" class="space-y-5">
         <div>
-          <h1 id="shop-title" style="color: var(--text-main); font-size: 2rem;">Shop Dashboard</h1>
-          <p id="shop-subtitle" style="color: var(--text-muted);">ID: <span id="shop-id-display"></span></p>
+          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Shop ID ya Email</label>
+          <input type="text" id="loginId" required placeholder="e.g. PE-1042 ya name@example.com" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none text-sm">
         </div>
-        <span id="shop-status-badge" class="badge badge-success">Active</span>
-      </div>
-
-      <!-- Stat Cards -->
-      <div class="grid">
-        <div class="card" style="border-left: 5px solid var(--primary);">
-          <div style="color: var(--text-muted); font-weight: 600;">Today's Prints</div>
-          <div style="font-size: 2.2rem; font-weight: 800; color: var(--text-main);" id="stat-prints">0</div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Password</label>
+          <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none text-sm">
         </div>
-        <div class="card" style="border-left: 5px solid var(--success);">
-          <div style="color: var(--text-muted); font-weight: 600;">Today's Earnings</div>
-          <div style="font-size: 2.2rem; font-weight: 800; color: var(--success);" id="stat-earnings">₹0</div>
-        </div>
-        <div class="card" style="border-left: 5px solid var(--warning);">
-          <div style="color: var(--text-muted); font-weight: 600;">Total Orders</div>
-          <div style="font-size: 2.2rem; font-weight: 800; color: var(--text-main);" id="stat-orders">0</div>
-        </div>
-      </div>
-
-      <!-- QR Code & Setup Section -->
-      <div class="grid" style="grid-template-columns: 1fr 2fr;">
-        <div class="card" style="text-align: center;">
-          <h3 class="card-title">Your Shop QR Code 📱</h3>
-          <div id="qr-container" style="margin: 1rem 0;">
-            <div class="loader"></div>
-          </div>
-          <a id="download-qr-btn" download="Shop_QR.png" class="btn btn-primary" style="width: 100%; margin-bottom: 10px;">Download QR Code (Print)</a>
-          <a href="#" id="customer-link" target="_blank" class="btn btn-outline" style="width: 100%;">Open Customer Page</a>
-        </div>
-
-        <div class="card">
-          <h3 class="card-title">Windows PC Print Agent Setup 💻</h3>
-          <p style="margin-bottom: 1rem; color: var(--text-muted);">Run the print agent script on the PC connected to your printer for automated wireless printing.</p>
-          
-          <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem;">
-            <a href="/print_agent.py" download class="btn btn-secondary">📥 Download Python Agent Script</a>
-            <a href="https://www.sumatrapdfreader.org/free-pdf-reader" target="_blank" class="btn btn-outline">📥 Download SumatraPDF (Recommended)</a>
-          </div>
-
-          <div style="background: var(--bg-color); padding: 1rem; border-radius: 8px; font-size: 0.9rem;">
-            <strong>Quick Setup Instructions:</strong>
-            <ol style="margin-left: 1.5rem; margin-top: 0.5rem;">
-              <li>Install Python on your Windows PC (if not already installed).</li>
-              <li>Run <code>pip install requests</code> in Terminal / CMD.</li>
-              <li>Verify your SHOP_ID and SERVER_URL in <code>print_agent.py</code>.</li>
-              <li>Run the script: <code>python print_agent.py</code></li>
-            </ol>
-          </div>
-        </div>
-      </div>
-
-      <!-- Settings & Password Tabs/Cards -->
-      <div class="grid">
-        <div class="card">
-          <h3 class="card-title">Update Shop Settings ⚙️</h3>
-          <div id="settings-msg" style="display: none; margin-bottom: 1rem;"></div>
-          <div class="form-group">
-            <label>Shop Name</label>
-            <input type="text" id="set-name" class="form-control">
-          </div>
-          <div class="form-group">
-            <label>Printer Model</label>
-            <input type="text" id="set-printer" class="form-control">
-          </div>
-          <div style="display: flex; gap: 10px;">
-            <div class="form-group" style="flex: 1;">
-              <label>B&W Rate (₹)</label>
-              <input type="number" id="set-bw" class="form-control" step="0.5">
-            </div>
-            <div class="form-group" style="flex: 1;">
-              <label>Color Rate (₹)</label>
-              <input type="number" id="set-color" class="form-control" step="0.5">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Payment Gateway</label>
-            <select id="set-gateway" class="form-control" onchange="toggleSettingsGateway()">
-              <option value="razorpay">Razorpay</option>
-              <option value="phonepe">PhonePe</option>
-            </select>
-          </div>
-          <div id="set-rzp-group">
-            <div class="form-group">
-              <label>Razorpay Key ID</label>
-              <input type="text" id="set-rzp-id" class="form-control">
-            </div>
-            <div class="form-group">
-              <label>Razorpay Key Secret</label>
-              <input type="password" id="set-rzp-secret" class="form-control" placeholder="Change secret (optional)">
-            </div>
-          </div>
-          <div id="set-phonepe-group" style="display: none;">
-            <div class="form-group">
-              <label>PhonePe Merchant ID</label>
-              <input type="text" id="set-phonepe-mid" class="form-control">
-            </div>
-            <div class="form-group">
-              <label>PhonePe Salt Key</label>
-              <input type="password" id="set-phonepe-salt" class="form-control">
-            </div>
-          </div>
-          <button class="btn btn-primary" style="width: 100%;" onclick="saveSettings()">Save Settings</button>
-        </div>
-
-        <div class="card">
-          <h3 class="card-title">Change Password 🔑</h3>
-          <div id="pass-msg" style="display: none; margin-bottom: 1rem;"></div>
-          <div class="form-group">
-            <label>Current Password</label>
-            <input type="password" id="chg-curr" class="form-control">
-          </div>
-          <div class="form-group">
-            <label>New Password</label>
-            <input type="password" id="chg-new" class="form-control">
-          </div>
-          <button class="btn btn-outline" style="width: 100%; margin-top: 1.5rem;" onclick="changePassword()">Update Password</button>
-        </div>
-      </div>
-
-      <!-- Recent Print Jobs Table -->
-      <div class="card" style="margin-top: 2rem;">
-        <h3 class="card-title">Recent Print Jobs (Latest 20) 📄</h3>
-        <div class="table-responsive">
-          <table>
-            <thead>
-              <tr>
-                <th>File</th>
-                <th>Pages (B&W / Color)</th>
-                <th>Amount</th>
-                <th>Payment Status</th>
-                <th>Print Status</th>
-                <th>Time</th>
-              </tr>
-            </thead>
-            <tbody id="jobs-table-body">
-              <tr><td colspan="6" style="text-align: center;">Loading jobs...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <!-- Firebase Auth Modal -->
-  <div class="modal-overlay" id="auth-modal">
-    <div class="modal-card">
-      <button class="modal-close" onclick="closeAuthModal()">&times;</button>
-      <h2 id="modal-title" style="text-align: center; color: var(--text-main); margin-bottom: 1.5rem;">Firebase Login</h2>
-      <div id="auth-error" style="color: var(--danger); display: none; margin-bottom: 1rem; text-align: center; font-size: 0.9rem;"></div>
-      <div class="form-group">
-        <label>Email Address</label>
-        <input type="email" id="auth-email" class="form-control" placeholder="name@example.com">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="auth-password" class="form-control" placeholder="Password">
-      </div>
-      <button class="btn btn-primary" id="modal-submit-btn" style="width: 100%; margin-top: 0.5rem;" onclick="handleAuthSubmit()">Login</button>
-      <div style="text-align: center; margin: 1rem 0; color: var(--text-muted); font-size: 0.85rem;">OR</div>
-      <button class="btn btn-google" onclick="handleGoogleAuth()">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" alt="Google"> Continue with Google
-      </button>
-      <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
-        <span id="modal-switch-text">Don't have an account?</span>
-        <a href="#" id="modal-switch-link" style="color: var(--primary); font-weight: 700; text-decoration: none;" onclick="switchAuthMode()">Sign Up</a>
-      </div>
+        <button type="submit" id="btn-login" class="w-full py-3.5 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl shadow-lg transition-all text-sm flex items-center justify-center gap-2">
+          <i class="fa-solid fa-right-to-bracket"></i> Login Karo
+        </button>
+      </form>
     </div>
   </div>
 
-  <!-- Company Policy Info Modal -->
-  <div class="modal-overlay" id="company-modal">
-    <div class="modal-card modal-card-large">
-      <button class="modal-close" onclick="closeCompanyModal()">&times;</button>
-      <h2 id="company-modal-title" style="color: var(--text-main); margin-bottom: 1rem;">...</h2>
-      <div id="company-modal-body" style="line-height: 1.7; color: var(--text-main);">...</div>
-    </div>
-  </div>
+  <!-- DASHBOARD VIEW (hidden by default) -->
+  <div id="dashboard-view" class="hidden">
+    <!-- SIDEBAR -->
+    <aside class="fixed left-0 top-0 h-screen w-64 bg-gray-900 text-white flex flex-col z-40">
+      <div class="p-6 border-b border-gray-800">
+        <span class="font-bold text-xl tracking-tight">Print<span class="text-violet-400">Ease</span></span>
+        <p class="text-xs text-gray-400 mt-1">Shop Owner Panel</p>
+      </div>
+      <div class="px-4 py-3 mx-4 mt-4 bg-gray-800/80 rounded-xl border border-gray-700/50">
+        <p class="text-xs text-gray-400">Shop ID</p>
+        <p class="text-sm font-mono text-violet-400 font-bold" id="sidebar-shopid">PE-0000</p>
+      </div>
+      <nav class="flex-1 p-4 space-y-1 mt-2">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="tab-btn active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all bg-violet-600 text-white">
+          <i class="fa-solid fa-gauge w-4"></i>Dashboard
+        </button>
+        <button onclick="switchTab('qrcode')" id="nav-qrcode" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-all">
+          <i class="fa-solid fa-qrcode w-4"></i>QR Code & Agent
+        </button>
+        <button onclick="switchTab('jobs')" id="nav-jobs" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-all">
+          <i class="fa-solid fa-list-check w-4"></i>Print Jobs
+        </button>
+        <button onclick="switchTab('settings')" id="nav-settings" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-all">
+          <i class="fa-solid fa-gear w-4"></i>Settings
+        </button>
+      </nav>
+      <div class="p-4 border-t border-gray-800">
+        <button onclick="handleLogout()" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-xl transition-all">
+          <i class="fa-solid fa-right-from-bracket w-4"></i>Logout
+        </button>
+      </div>
+    </aside>
 
-  <!-- FOOTER -->
-  <footer class="site-footer">
-    <div class="footer-container">
-      <div class="footer-brand">
-        <a href="/" class="footer-logo"><img src="/logo.jpg" alt="QRPrint" class="brand-logo-img"> QRPrint</a>
-        <div class="footer-tagline">Wireless Cloud Printing & PDF Toolkit</div>
-        <p>India's premier wireless cloud printing system.</p>
-        <div class="razorpay-badge">🛡️ SECURED BY RAZORPAY</div>
+    <!-- MAIN CONTENT -->
+    <main class="ml-64 p-8 min-h-screen">
+      <!-- TAB 1: DASHBOARD -->
+      <div id="tab-content-dashboard" class="tab-content space-y-8">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-extrabold text-gray-900" id="dash-shop-name">Shop Dashboard</h1>
+            <p class="text-xs text-gray-500">Real-time print performance stats</p>
+          </div>
+          <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-green-500 animate-ping"></span> Active Shop
+          </span>
+        </div>
+
+        <!-- STAT CARDS -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all">
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-xs font-semibold text-gray-500 uppercase">Today's Prints</p>
+              <div class="w-8 h-8 bg-violet-100 text-violet-600 rounded-lg flex items-center justify-center text-sm"><i class="fa-solid fa-print"></i></div>
+            </div>
+            <p class="text-3xl font-extrabold text-gray-900" id="st-today-prints">0</p>
+          </div>
+          <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all">
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-xs font-semibold text-gray-500 uppercase">Today's Earnings</p>
+              <div class="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center text-sm"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+            </div>
+            <p class="text-3xl font-extrabold text-emerald-600" id="st-today-earnings">₹0</p>
+          </div>
+          <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all">
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-xs font-semibold text-gray-500 uppercase">Total Orders</p>
+              <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-sm"><i class="fa-solid fa-receipt"></i></div>
+            </div>
+            <p class="text-3xl font-extrabold text-gray-900" id="st-total-orders">0</p>
+          </div>
+          <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all">
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-xs font-semibold text-gray-500 uppercase">Total Earnings</p>
+              <div class="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center text-sm"><i class="fa-solid fa-wallet"></i></div>
+            </div>
+            <p class="text-3xl font-extrabold text-gray-900" id="st-total-earnings">₹0</p>
+          </div>
+        </div>
       </div>
-      <div class="footer-column">
-        <h4>Partner</h4>
-        <ul>
-          <li><a href="https://www.swagchup.in/" target="_blank">Merge PDFs ↗</a></li>
-          <li><a href="https://www.swagchup.in/" target="_blank">Split PDFs ↗</a></li>
-          <li><a href="https://www.swagchup.in/" target="_blank">Convert PDF ↗</a></li>
-          <li><a href="https://www.swagchup.in/" target="_blank">Secure PDF ↗</a></li>
-        </ul>
+
+      <!-- TAB 2: QR CODE & AGENT -->
+      <div id="tab-content-qrcode" class="tab-content hidden space-y-8">
+        <h1 class="text-2xl font-extrabold text-gray-900">Shop QR Code & Print Agent 📱</h1>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm text-center">
+            <h3 class="text-base font-bold text-gray-800 mb-4">Customer Scan QR Code</h3>
+            <img id="dash-qr-img" src="" alt="QR Code" class="w-56 h-56 mx-auto rounded-2xl border border-gray-200 p-2 bg-white shadow-sm mb-6">
+            <a id="dash-qr-dl" download="Shop_QR.png" class="inline-flex items-center justify-center gap-2 w-full py-3.5 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-sm transition-all shadow-md">
+              <i class="fa-solid fa-download"></i> Download High Res QR Code
+            </a>
+          </div>
+
+          <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-4">
+            <h3 class="text-base font-bold text-gray-800">Windows Print Agent Setup 💻</h3>
+            <p class="text-xs text-gray-500 leading-relaxed">Apne printer wale Windows PC par humara Print Agent script chalaein. Yeh automatically cloud jobs ko pick karke print karta hai.</p>
+            <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-2 text-xs">
+              <p class="font-bold text-gray-700">Quick Installation Steps:</p>
+              <ol class="list-decimal list-inside text-gray-600 space-y-1">
+                <li>Windows PC par Python install karein.</li>
+                <li>Terminal mein command chalaein: <code class="bg-gray-200 px-1.5 py-0.5 rounded text-violet-700 font-mono">pip install requests</code></li>
+                <li>Agent script download karke shop ID map karein aur run karein.</li>
+              </ol>
+            </div>
+            <a href="/api/agent/jobs/sample" class="inline-flex items-center justify-center gap-2 w-full py-3.5 bg-gray-800 hover:bg-gray-900 text-white font-bold rounded-xl text-sm transition-all shadow-md">
+              <i class="fa-solid fa-file-code"></i> Download Print Agent Setup Script
+            </a>
+          </div>
+        </div>
       </div>
-      <div class="footer-column">
-        <h4>Company</h4>
-        <ul>
-          <li><a href="/" onclick="openCompanyModal('about')">About Us</a></li>
-          <li><a href="/dashboard">Pricing</a></li>
-          <li><a href="/" onclick="openCompanyModal('privacy')">Privacy Policy</a></li>
-          <li><a href="/" onclick="openCompanyModal('terms')">Terms of Service</a></li>
-          <li><a href="/" onclick="openCompanyModal('refund')">Refund Policy</a></li>
-        </ul>
+
+      <!-- TAB 3: PRINT JOBS -->
+      <div id="tab-content-jobs" class="tab-content hidden space-y-6">
+        <h1 class="text-2xl font-extrabold text-gray-900">Recent Print Jobs 📄</h1>
+        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-gray-50 border-b border-gray-100 text-xs font-bold uppercase text-gray-500">
+                  <th class="p-4">File</th>
+                  <th class="p-4">Pages / Copies</th>
+                  <th class="p-4">Amount</th>
+                  <th class="p-4">Payment</th>
+                  <th class="p-4">Print Status</th>
+                  <th class="p-4">Time</th>
+                </tr>
+              </thead>
+              <tbody id="jobs-tbody" class="text-sm divide-y divide-gray-100">
+                <tr><td colspan="6" class="p-8 text-center text-gray-400">Loading print jobs...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      <div class="footer-column">
-        <h4>Get in Touch</h4>
-        <ul>
-          <li><a href="mailto:support@qrprint.in">✉️ Support Ticket</a></li>
-          <li><a href="https://wa.me/919876543210" target="_blank">📞 WhatsApp Support</a></li>
-        </ul>
+
+      <!-- TAB 4: SETTINGS -->
+      <div id="tab-content-settings" class="tab-content hidden max-w-2xl space-y-6">
+        <h1 class="text-2xl font-extrabold text-gray-900">Shop Settings ⚙️</h1>
+        <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-6">
+          <div id="set-msg" class="hidden p-4 rounded-xl text-xs font-bold"></div>
+          <div>
+            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Shop Name</label>
+            <input type="text" id="set-name" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Printer Model</label>
+            <input type="text" id="set-printer" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 uppercase mb-1">B&W Rate (₹)</label>
+              <input type="number" id="set-bw" step="0.5" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Color Rate (₹)</label>
+              <input type="number" id="set-color" step="0.5" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none">
+            </div>
+          </div>
+          <button onclick="saveSettings()" class="w-full py-3.5 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-sm shadow-md">
+            Save Settings
+          </button>
+        </div>
       </div>
-    </div>
-    <div class="footer-bottom">
-      <div>&copy; 2026 QRPrint. Built with pride from India 🇮🇳</div>
-    </div>
-  </footer>
+    </main>
+  </div>
 
   <script>
-    let currentShop = null;
-    let currentMode = 'login';
+    checkSession();
 
-    function initTheme() {
-      const savedTheme = localStorage.getItem('qr_theme') || 'light';
-      document.documentElement.setAttribute('data-theme', savedTheme);
-      document.getElementById('theme-btn').innerText = savedTheme === 'dark' ? '☀️' : '🌙';
-    }
-    function toggleTheme() {
-      const current = document.documentElement.getAttribute('data-theme');
-      const next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('qr_theme', next);
-      document.getElementById('theme-btn').innerText = next === 'dark' ? '☀️' : '🌙';
-    }
-    initTheme();
-
-    checkAuth();
-
-    const companyContent = {
-      about: {
-        title: "About Us 🏢",
-        html: `<p><strong>QRPrint</strong> is India's leading wireless cloud printing infrastructure designed specifically for print shop owners (xerox shops, cyber cafes, and stationery stores) and their customers.</p>
-               <br><p>Our mission is to eliminate USB drives, Bluetooth pairing delays, and wire connections by offering a 100% cloud-automated printing ecosystem. Shop owners display a unique QR code outside their premises; customers scan, upload documents securely, pay online or at the counter, and documents automatically print directly on the shop's printer in seconds.</p>`
-      },
-      privacy: {
-        title: "Privacy Policy 🛡️",
-        html: `<p>At <strong>QRPrint</strong>, we prioritize the utmost security and confidentiality of your documents.</p>
-               <br><h4>1. Document Confidentiality</h4>
-               <p>Uploaded documents (PDFs, images, Word docs) are strictly used for instant printing tasks. All uploaded files are automatically and permanently purged from our storage servers within 24 hours.</p>
-               <br><h4>2. Data Protection</h4>
-               <p>We do not share, sell, or analyze your personal document contents. Payments are processed through bank-grade secured payment gateways (Razorpay / PhonePe).</p>`
-      },
-      terms: {
-        title: "Terms of Service 📜",
-        html: `<p>By accessing or registering with <strong>QRPrint</strong>, you agree to the following terms:</p>
-               <br><h4>1. Usage Terms</h4>
-               <p>Print shop owners must maintain active print agent software on their connected Windows PCs to process incoming print queues.</p>
-               <br><h4>2. Prohibited Content</h4>
-               <p>Users must not upload illegal, fraudulent, or unauthorized copyrighted material for printing.</p>`
-      },
-      refund: {
-        title: "Refund Policy 💸",
-        html: `<p>We strive to ensure complete customer and shop owner satisfaction.</p>
-               <br><h4>1. Setup Fee Refunds</h4>
-               <p>Shop owners are eligible for a full refund of their initial setup fee within 7 days of registration if technical integration assistance is unsuccessful.</p>
-               <br><h4>2. Print Job Adjustments</h4>
-               <p>If a print job fails due to printer hardware offline status or paper jam, payment is held in queue until resolved or marked for cash counter reconciliation.</p>`
-      }
-    };
-
-    function openCompanyModal(type) {
-      const data = companyContent[type];
-      if (data) {
-        document.getElementById('company-modal-title').innerHTML = data.title;
-        document.getElementById('company-modal-body').innerHTML = data.html;
-        document.getElementById('company-modal').classList.add('active');
-      }
-    }
-    function closeCompanyModal() {
-      document.getElementById('company-modal').classList.remove('active');
-    }
-
-    async function checkAuth() {
+    async function checkSession() {
       try {
         const res = await fetch('/api/admin/me');
         if (res.ok) {
           const data = await res.json();
-          currentShop = data.shop;
-          showDashboard(data);
+          showDashboard(data.shop);
         } else {
-          showLogin();
+          document.getElementById('login-view').classList.remove('hidden');
+          document.getElementById('dashboard-view').classList.add('hidden');
         }
+      } catch (e) {}
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const loginId = document.getElementById('loginId').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const err = document.getElementById('login-error');
+      err.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ shopId: loginId, email: loginId, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Login failed');
+
+        showDashboard(data.shop);
       } catch (err) {
-        showLogin();
+        err.innerText = err.message;
+        err.classList.remove('hidden');
       }
     }
 
-    function showLogin() {
-      document.getElementById('login-view').style.display = 'block';
-      document.getElementById('dashboard-view').style.display = 'none';
-      document.getElementById('logout-container').style.display = 'none';
-    }
+    function showDashboard(shop) {
+      document.getElementById('login-view').classList.add('hidden');
+      document.getElementById('dashboard-view').classList.remove('hidden');
 
-    function showDashboard(data) {
-      document.getElementById('login-view').style.display = 'none';
-      document.getElementById('set-pass-view').style.display = 'none';
-      document.getElementById('dashboard-view').style.display = 'block';
-      document.getElementById('logout-container').style.display = 'inline-block';
+      document.getElementById('sidebar-shopid').innerText = shop.shopId;
+      document.getElementById('dash-shop-name').innerText = shop.shopName;
 
-      const s = data.shop;
-      document.getElementById('shop-title').innerText = s.name;
-      document.getElementById('shop-id-display').innerText = s.id;
-      document.getElementById('stat-prints').innerText = data.today_prints;
-      document.getElementById('stat-earnings').innerText = '₹' + data.today_earnings;
-      document.getElementById('stat-orders').innerText = data.total_orders;
+      document.getElementById('set-name').value = shop.shopName || '';
+      document.getElementById('set-printer').value = shop.printerModel || '';
+      document.getElementById('set-bw').value = shop.bwPrice || 2;
+      document.getElementById('set-color').value = shop.colorPrice || 8;
 
-      document.getElementById('set-name').value = s.name || '';
-      document.getElementById('set-printer').value = s.printer || '';
-      document.getElementById('set-bw').value = s.bw_price || 1;
-      document.getElementById('set-color').value = s.color_price || 5;
-      document.getElementById('set-gateway').value = s.gateway || 'razorpay';
-      document.getElementById('set-rzp-id').value = s.razorpay_key_id || '';
-      document.getElementById('set-phonepe-mid').value = s.phonepe_merchant_id || '';
-      toggleSettingsGateway();
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(window.location.origin + '/shop/' + shop.shopId)}`;
+      document.getElementById('dash-qr-img').src = qrUrl;
+      document.getElementById('dash-qr-dl').href = qrUrl;
 
-      loadQR();
+      loadStats();
       loadJobs();
     }
 
-    function toggleSettingsGateway() {
-      const gw = document.getElementById('set-gateway').value;
-      if (gw === 'razorpay') {
-        document.getElementById('set-rzp-group').style.display = 'block';
-        document.getElementById('set-phonepe-group').style.display = 'none';
-      } else {
-        document.getElementById('set-rzp-group').style.display = 'none';
-        document.getElementById('set-phonepe-group').style.display = 'block';
-      }
-    }
-
-    async function handleLogin() {
-      const shop_id = document.getElementById('login-shop-id').value.trim();
-      const password = document.getElementById('login-password').value.trim();
-      const errEl = document.getElementById('login-error');
-      errEl.style.display = 'none';
-
+    async function loadStats() {
       try {
-        const res = await fetch('/api/admin/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ shop_id, password })
-        });
+        const res = await fetch('/api/admin/stats');
         const data = await res.json();
-        if (res.ok) {
-          checkAuth();
-        } else {
-          errEl.innerText = data.error || 'Login failed';
-          errEl.style.display = 'block';
-        }
-      } catch (err) {
-        errEl.innerText = err.message;
-        errEl.style.display = 'block';
-      }
-    }
-
-    function toggleSetPasswordModal(show) {
-      document.getElementById('login-view').style.display = show ? 'none' : 'block';
-      document.getElementById('set-pass-view').style.display = show ? 'block' : 'none';
-    }
-
-    async function handleSetPassword() {
-      const shop_id = document.getElementById('sp-shop-id').value.trim();
-      const new_password = document.getElementById('sp-password').value.trim();
-      const errEl = document.getElementById('set-pass-error');
-      errEl.style.display = 'none';
-
-      try {
-        const res = await fetch('/api/admin/set-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ shop_id, new_password })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          alert('Password set successfully! Please log in now.');
-          toggleSetPasswordModal(false);
-          document.getElementById('login-shop-id').value = shop_id;
-        } else {
-          errEl.innerText = data.error || 'Failed to set password';
-          errEl.style.display = 'block';
-        }
-      } catch (err) {
-        errEl.innerText = err.message;
-        errEl.style.display = 'block';
-      }
-    }
-
-    async function loadQR() {
-      try {
-        const res = await fetch('/api/admin/qrcode');
-        const data = await res.json();
-        document.getElementById('qr-container').innerHTML = `<img src="${data.qr_base64}" style="max-width: 220px; border-radius: 8px;">`;
-        document.getElementById('download-qr-btn').href = data.qr_base64;
-        document.getElementById('customer-link').href = data.target_url;
-      } catch (err) {
-        document.getElementById('qr-container').innerText = 'QR Load Error';
-      }
+        document.getElementById('st-today-prints').innerText = data.todayPrints || 0;
+        document.getElementById('st-today-earnings').innerText = '₹' + (data.todayEarnings || 0);
+        document.getElementById('st-total-orders').innerText = data.totalOrders || 0;
+        document.getElementById('st-total-earnings').innerText = '₹' + (data.totalEarnings || 0);
+      } catch (e) {}
     }
 
     async function loadJobs() {
       try {
         const res = await fetch('/api/admin/jobs');
         const data = await res.json();
-        const tbody = document.getElementById('jobs-table-body');
+        const tbody = document.getElementById('jobs-tbody');
         if (!data.jobs || data.jobs.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No print jobs found.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-400">No print jobs found.</td></tr>';
           return;
         }
 
         tbody.innerHTML = data.jobs.map(j => `
-          <tr>
-            <td><strong>${j.original_name || j.filename}</strong></td>
-            <td>Total: ${j.pages} (${j.bw_pages} B&W, ${j.color_pages} Color)</td>
-            <td>₹${j.amount}</td>
-            <td><span class="badge ${j.payment_status === 'paid' ? 'badge-success' : j.payment_status === 'counter' ? 'badge-pending' : 'badge-danger'}">${j.payment_status}</span></td>
-            <td><span class="badge ${j.print_status === 'done' ? 'badge-success' : j.print_status === 'queued' ? 'badge-pending' : 'badge-danger'}">${j.print_status}</span></td>
-            <td><small>${new Date(j.created_at).toLocaleTimeString()}</small></td>
+          <tr class="hover:bg-gray-50/50">
+            <td class="p-4 font-semibold text-gray-800">${j.originalName || j.fileName}</td>
+            <td class="p-4 text-xs text-gray-500">${j.pages} pgs (${j.colorMode}) × ${j.copies || 1} copy</td>
+            <td class="p-4 font-bold text-gray-900">₹${j.amount || 0}</td>
+            <td class="p-4"><span class="px-2.5 py-1 text-xs font-bold rounded-full ${j.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">${j.paymentStatus}</span></td>
+            <td class="p-4"><span class="px-2.5 py-1 text-xs font-bold rounded-full ${j.printStatus === 'done' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">${j.printStatus}</span></td>
+            <td class="p-4 text-xs text-gray-400">${new Date(j.createdAt).toLocaleTimeString()}</td>
           </tr>
         `).join('');
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (e) {}
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.className = "tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-all";
+      });
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+
+      document.getElementById('nav-' + tab).className = "tab-btn active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all bg-violet-600 text-white";
+      document.getElementById('tab-content-' + tab).classList.remove('hidden');
     }
 
     async function saveSettings() {
-      const msg = document.getElementById('settings-msg');
+      const msg = document.getElementById('set-msg');
       try {
         const res = await fetch('/api/admin/settings', {
-          method: 'POST',
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: document.getElementById('set-name').value,
-            printer: document.getElementById('set-printer').value,
-            bw_price: document.getElementById('set-bw').value,
-            color_price: document.getElementById('set-color').value,
-            gateway: document.getElementById('set-gateway').value,
-            razorpay_key_id: document.getElementById('set-rzp-id').value,
-            razorpay_key_secret: document.getElementById('set-rzp-secret').value,
-            phonepe_merchant_id: document.getElementById('set-phonepe-mid').value,
-            phonepe_salt_key: document.getElementById('set-phonepe-salt').value
+            shopName: document.getElementById('set-name').value,
+            printerModel: document.getElementById('set-printer').value,
+            bwPrice: document.getElementById('set-bw').value,
+            colorPrice: document.getElementById('set-color').value
           })
         });
         if (res.ok) {
-          msg.style.color = 'var(--success)';
-          msg.innerText = '✅ Settings saved successfully!';
-          msg.style.display = 'block';
+          msg.className = "p-4 rounded-xl text-xs font-bold bg-green-100 text-green-700";
+          msg.innerText = "✅ Settings saved successfully!";
+          msg.classList.remove('hidden');
         }
-      } catch (err) {
-        msg.style.color = 'var(--danger)';
-        msg.innerText = err.message;
-        msg.style.display = 'block';
-      }
-    }
-
-    async function changePassword() {
-      const msg = document.getElementById('pass-msg');
-      try {
-        const res = await fetch('/api/admin/change-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            current_password: document.getElementById('chg-curr').value,
-            new_password: document.getElementById('chg-new').value
-          })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          msg.style.color = 'var(--success)';
-          msg.innerText = '✅ Password updated successfully!';
-          msg.style.display = 'block';
-        } else {
-          msg.style.color = 'var(--danger)';
-          msg.innerText = data.error || 'Failed to update';
-          msg.style.display = 'block';
-        }
-      } catch (err) {
-        msg.style.color = 'var(--danger)';
-        msg.innerText = err.message;
-        msg.style.display = 'block';
-      }
+      } catch (e) {}
     }
 
     async function handleLogout() {
-      await fetch('/api/admin/logout');
-      showLogin();
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.reload();
     }
-
-    function openAuthModal(mode) {
-      currentMode = mode;
-      updateModalUI();
-      document.getElementById('auth-modal').classList.add('active');
-    }
-    function closeAuthModal() {
-      document.getElementById('auth-modal').classList.remove('active');
-      document.getElementById('auth-error').style.display = 'none';
-    }
-    function switchAuthMode() {
-      currentMode = currentMode === 'login' ? 'signup' : 'login';
-      updateModalUI();
-    }
-    function updateModalUI() {
-      const title = document.getElementById('modal-title');
-      const submitBtn = document.getElementById('modal-submit-btn');
-      const switchText = document.getElementById('modal-switch-text');
-      const switchLink = document.getElementById('modal-switch-link');
-      if (currentMode === 'login') {
-        title.innerText = 'Firebase Console Login 🔥';
-        submitBtn.innerText = 'Login';
-        switchText.innerText = "Don't have an account?";
-        switchLink.innerText = 'Sign Up';
-      } else {
-        title.innerText = 'Firebase Sign Up 🔥';
-        submitBtn.innerText = 'Create Account';
-        switchText.innerText = 'Already have an account?';
-        switchLink.innerText = 'Login';
-      }
-    }
-    async function handleAuthSubmit() {
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-password').value.trim();
-      const errEl = document.getElementById('auth-error');
-      errEl.style.display = 'none';
-      if (!email || !password) {
-        errEl.innerText = 'Please enter both email and password';
-        errEl.style.display = 'block';
-        return;
-      }
-      let res = currentMode === 'login' 
-        ? await window.FirebaseAuthHelper.loginWithEmail(email, password)
-        : await window.FirebaseAuthHelper.signUpWithEmail(email, password);
-      if (res.success) {
-        alert('🎉 Firebase Auth Success! Welcome ' + res.user.email);
-        closeAuthModal();
-      } else {
-        errEl.innerText = res.error;
-        errEl.style.display = 'block';
-      }
-    }
-    async function handleGoogleAuth() {
-      const res = await window.FirebaseAuthHelper.signInWithGoogle();
-      if (res.success) {
-        alert('🎉 Google Login Success! Welcome ' + res.user.displayName);
-        closeAuthModal();
-      } else {
-        const errEl = document.getElementById('auth-error');
-        errEl.innerText = res.error;
-        errEl.style.display = 'block';
-      }
-    }
-    window.FirebaseAuthHelper.onAuthStateChanged(user => {
-      const container = document.getElementById('nav-auth-container');
-      const themeBtnHTML = `<button class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle Dark/Light Theme">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙'}</button>`;
-      if (user) {
-        container.innerHTML = `
-          ${themeBtnHTML}
-          <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">👋 ${user.displayName || user.email.split('@')[0]}</span>
-          <button onclick="window.FirebaseAuthHelper.logout()" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Logout</button>
-        `;
-      } else {
-        container.innerHTML = `
-          ${themeBtnHTML}
-          <a href="#" onclick="openAuthModal('login')" class="btn btn-outline">Login</a>
-          <a href="#" onclick="openAuthModal('signup')" class="btn btn-primary">Sign Up</a>
-        `;
-      }
-    });
   </script>
 </body>
 </html>
