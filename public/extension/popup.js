@@ -8,9 +8,16 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.local.get(['shopId', 'serverUrl', 'isConnected'], (res) => {
     if (res.shopId) shopIdInput.value = res.shopId;
     if (res.serverUrl) serverUrlInput.value = res.serverUrl;
-    if (res.isConnected) {
+    if (res.isConnected && res.shopId) {
       statusDot.classList.add('active');
       statusText.innerText = 'Connected & Auto-Printing';
+    } else if (res.shopId) {
+      // Auto activate
+      chrome.storage.local.set({ isConnected: true }, () => {
+        statusDot.classList.add('active');
+        statusText.innerText = 'Connected & Auto-Printing';
+        chrome.runtime.sendMessage({ action: 'startPolling' });
+      });
     }
   });
 
