@@ -65,4 +65,24 @@ router.post('/done/:jobId', async (req, res) => {
   }
 });
 
+const AdmZip = require('adm-zip');
+
+// GET /api/agent/extension-zip -> download Chrome extension ZIP file
+router.get('/extension-zip', (req, res) => {
+  try {
+    const zip = new AdmZip();
+    const extDir = path.join(__dirname, '../public/extension');
+    zip.addLocalFolder(extDir);
+    const buffer = zip.toBuffer();
+    res.set({
+      'Content-Type': 'application/zip',
+      'Content-Disposition': 'attachment; filename=PrintEase-Chrome-Extension.zip',
+      'Content-Length': buffer.length
+    });
+    res.send(buffer);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
