@@ -56,7 +56,7 @@ router.post('/register', async (req, res) => {
 
     // Setup Razorpay order for platform registration fee
     const feeConfig = await Config.findOne({ key: 'setupFeeOffer' });
-    const amount = feeConfig ? Number(feeConfig.value) : 499;
+    const amount = feeConfig ? Number(feeConfig.value) : 1;
 
     let razorpayOrderId = 'order_mock_' + Math.random().toString(36).substring(2, 10);
     const platformKey = process.env.RAZORPAY_KEY_ID || 'rzp_test_mockkeyid';

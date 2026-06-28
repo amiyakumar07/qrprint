@@ -33,7 +33,7 @@ router.get('/stats', async (req, res) => {
       activeShops,
       pendingShops,
       setupFeeActual: actualConfig ? Number(actualConfig.value) : 999,
-      setupFeeOffer: offerConfig ? Number(offerConfig.value) : 499
+      setupFeeOffer: offerConfig ? Number(offerConfig.value) : 1
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

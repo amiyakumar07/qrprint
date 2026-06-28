@@ -22,7 +22,8 @@ mongoose.connect(mongoUri)
     const actual = await Config.findOne({ key: 'setupFeeActual' });
     if (!actual) await Config.create({ key: 'setupFeeActual', value: 999 });
     const offer = await Config.findOne({ key: 'setupFeeOffer' });
-    if (!offer) await Config.create({ key: 'setupFeeOffer', value: 499 });
+    if (!offer) await Config.create({ key: 'setupFeeOffer', value: 1 });
+    else await Config.updateOne({ key: 'setupFeeOffer' }, { value: 1 });
   })
   .catch(err => {
     console.warn('MongoDB connection error (running in local fallback mode):', err.message);
