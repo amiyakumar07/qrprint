@@ -376,28 +376,29 @@
       const dotEl = document.getElementById('web-status-dot');
       const locEl = document.getElementById('dash-device-location');
 
-      printerEl.innerText = 'Scanning hardware USB & Wi-Fi ports...';
+      printerEl.innerText = 'Scanning hardware USB & serial ports...';
 
       let detectedDeviceName = null;
       try {
         if (navigator.usb) {
-          const devices = await navigator.usb.getDevices();
-          if (devices && devices.length > 0) {
-            detectedDeviceName = devices[0].productName || 'USB Thermal / Laser Printer';
+          // Attempt to request or check connected hardware USB printer (Printer Class Code = 7)
+          let devices = await navigator.usb.getDevices();
+          let printerDevice = devices.find(d => d.deviceClass === 7 || (d.productName && d.productName.toLowerCase().includes('print')));
+          
+          if (!printerDevice) {
+            // Prompt user to select physically plugged USB printer
+            try {
+              printerDevice = await navigator.usb.requestDevice({ filters: [{ classCode: 7 }] });
+            } catch (e) {
+              // User cancelled or no device selected
+            }
+          }
+
+          if (printerDevice) {
+            detectedDeviceName = printerDevice.productName || printerDevice.manufacturerName || 'USB Thermal / Laser Printer';
           }
         }
       } catch (e) {}
-
-      if (!detectedDeviceName) {
-        // Check shop configured printer model as active target
-        const shopModel = document.getElementById('set-printer').value.trim();
-        if (shopModel) {
-          detectedDeviceName = shopModel + ' (System Spooler)';
-        } else {
-          // Check generic system printer API fallback
-          detectedDeviceName = 'Windows Default System Printer Spooler';
-        }
-      }
 
       if (detectedDeviceName) {
         boxEl.className = 'p-5 bg-emerald-50/90 rounded-2xl border border-emerald-200 space-y-3 transition-all shadow-sm';
@@ -419,13 +420,16 @@
 
         alert(`✅ Printer Device Detected & Connected!\n\nDevice Name: ${detectedDeviceName}\nStatus: Ready for wireless customer printing.`);
       } else {
-        boxEl.className = 'p-5 bg-red-50/90 rounded-2xl border border-red-200 space-y-3 transition-all shadow-sm';
-        dotEl.className = 'w-3 h-3 rounded-full bg-red-500';
-        statusEl.className = 'text-xs font-bold text-red-900';
-        statusEl.innerText = '⚠️ Please connect printer';
+        boxEl.className = 'p-5 bg-amber-50/80 rounded-2xl border border-amber-200 space-y-3 transition-all';
+        dotEl.className = 'w-3 h-3 rounded-full bg-amber-500 animate-pulse';
+        statusEl.className = 'text-xs font-bold text-amber-900';
+        statusEl.innerText = '⚠️ No Printer Connected';
 
         printerEl.className = 'text-red-600 font-bold';
-        printerEl.innerText = 'No physical printer detected on USB / Wi-Fi';
+        printerEl.innerText = 'Please connect printer via USB or Wi-Fi';
+
+        locEl.className = 'text-gray-600';
+        locEl.innerText = 'Local Shop Terminal (Waiting for printer)';
 
         alert('⚠️ No Printer Connected!\n\nPlease connect your printer device via USB cable or Wi-Fi network and click "Detect Devices" again.');
       }
