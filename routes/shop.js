@@ -3,8 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const QRCode = require('qrcode');
 const Razorpay = require('razorpay');
-const Shop = require('../models/Shop');
-const Config = require('../models/Config');
+const { Shop, Config } = require('../models/dbStore');
 
 // POST /api/shop/register -> create shop, return shopId
 router.post('/register', async (req, res) => {
@@ -30,7 +29,7 @@ router.post('/register', async (req, res) => {
     const customerUrl = `${baseUrl}/shop/${shopId}`;
     const qrCodeDataUrl = await QRCode.toDataURL(customerUrl);
 
-    const shop = new Shop({
+    const shop = await Shop.create({
       shopId,
       shopName,
       email: email ? email.toLowerCase() : '',
@@ -51,8 +50,6 @@ router.post('/register', async (req, res) => {
       isActive: true, // Auto active or pending payment
       setupFeePaid: false
     });
-
-    await shop.save();
 
     // Setup Razorpay order for platform registration fee
     const feeConfig = await Config.findOne({ key: 'setupFeeOffer' });

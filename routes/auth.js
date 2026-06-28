@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const Shop = require('../models/Shop');
+const { Shop } = require('../models/dbStore');
 
 // POST /api/auth/login -> Shop owner login
 router.post('/login', async (req, res) => {

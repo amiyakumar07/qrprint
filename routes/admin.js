@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { requireShopAuth } = require('../middleware/auth');
-const Shop = require('../models/Shop');
-const PrintJob = require('../models/PrintJob');
+const { Shop, PrintJob } = require('../models/dbStore');
 
 // GET /api/admin/me -> session check
 router.get('/me', requireShopAuth, async (req, res) => {

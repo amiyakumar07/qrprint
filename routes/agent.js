@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
-const PrintJob = require('../models/PrintJob');
+const { PrintJob } = require('../models/dbStore');
 
 // GET /api/agent/jobs/:shopId -> return unpicked paid/counter jobs
 router.get('/jobs/:shopId', async (req, res) => {

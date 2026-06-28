@@ -7,18 +7,18 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
 
-const Shop = require('./models/Shop');
-const Config = require('./models/Config');
+mongoose.set('bufferCommands', false);
+
+const { Shop, Config } = require('./models/dbStore');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Connect to MongoDB
 const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/printease';
-mongoose.connect(mongoUri)
+mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 2000 })
   .then(async () => {
     console.log('🍃 Connected to MongoDB');
-    // Seed default global config if missing
     const actual = await Config.findOne({ key: 'setupFeeActual' });
     if (!actual) await Config.create({ key: 'setupFeeActual', value: 999 });
     const offer = await Config.findOne({ key: 'setupFeeOffer' });

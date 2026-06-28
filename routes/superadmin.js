@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Shop = require('../models/Shop');
-const Config = require('../models/Config');
+const { Shop, Config } = require('../models/dbStore');
 
 // POST /api/superadmin/login
 router.post('/login', (req, res) => {

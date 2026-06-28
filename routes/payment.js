@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
-const Shop = require('../models/Shop');
-const PrintJob = require('../models/PrintJob');
+const { Shop, PrintJob } = require('../models/dbStore');
 
 // POST /api/payment/create -> create Razorpay order using SHOP's own keys
 router.post('/create', async (req, res) => {

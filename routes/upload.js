@@ -15,8 +15,7 @@ try {
 } catch (e) {
   console.warn('pdf-parse fallback mode:', e.message);
 }
-const Shop = require('../models/Shop');
-const PrintJob = require('../models/PrintJob');
+const { Shop, PrintJob } = require('../models/dbStore');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -67,7 +66,7 @@ router.post('/:shopId', upload.single('file'), async (req, res) => {
       }
     }
 
-    const job = new PrintJob({
+    const job = await PrintJob.create({
       shopId,
       fileName: req.file.filename,
       originalName: req.file.originalname,
@@ -82,8 +81,6 @@ router.post('/:shopId', upload.single('file'), async (req, res) => {
       paymentStatus: 'pending',
       printStatus: 'queued'
     });
-
-    await job.save();
 
     res.json({
       success: true,
